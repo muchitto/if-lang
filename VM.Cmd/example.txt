@@ -1,0 +1,219 @@
+// a programming language for interactive fiction
+
+var test : Test
+
+// Correct one
+//var testjoo = []
+var test2 : { test22 : Test, perse : number[], haha : { kaasu: string} } = { 
+    test22 : test, 
+    perse : [], 
+    haha : {
+        kaasu: ""
+    } 
+}
+//var test3 : { test : Test, perse : number[] } = { test : test, perse : [] }
+
+
+// Incorrect one
+// var test3 : { test : Test, perse : number[] } = { test : test, perse : 100 }
+
+var currentRoom : Room
+
+// a new type called Thing as the base type for all objects
+new type object called Thing {
+    var name : string
+    var description : string
+
+    @verb "look" "[this]"
+    def look() {
+        print(description)
+
+        return true
+    }
+
+    @verb "place" "[something]" "in" "[this]"
+    def place(something : object) {
+        if this is Container {
+            print("You can't place " + something.name + " in " + name + ".")
+            return false
+        }
+
+        print("You place " + something.name + " in " + name + ".")
+        return true
+    }
+
+    @verb "take" "[this]"
+    def take() {
+        if fixed_in_place is  {
+            print("You can't take " + name + " it is fixed in place.")
+            return false
+        }
+
+        print("You take " + name + ".")
+        return true
+    }
+}
+
+new type Thing called Container {
+}
+
+new type Thing called Room {
+    attr light = is on | is off
+}
+
+new Room called DarkForest {
+    name "dark forest"
+    description "A dark forest"
+    light is off
+}
+
+// because we don't say new typ, it will be a new type AND a new instance of that type both called Door
+new Thing called Door {
+    @verb "open" "[this]"
+    def open() {
+        print("You open the door.")
+    }
+
+    @verb "hit" "[this]" "with" "[with]"
+    def hitWith(with : object) {
+        if currentRoom.light is off {
+            print("You can't see the door.")
+            return false
+        }
+
+        print("You hit the door with " + with.name + ".")
+        return true
+    }
+}
+
+new Door called OldBrokenDoor {
+    name "broken old door"
+    description "A broken old door"  
+    door is
+
+    over def hitWith(with : object) {
+        if !super.hitWith(with) {
+            return false
+        }
+
+        print "You hit the door with " + with.name + "."
+        print "The door breaks into thousand moldy"
+
+        return true
+    }
+}
+
+new object called Test {
+    var test : Test
+    var perse : number    
+    attr is container
+
+    def init() {
+
+    }
+
+    def test2() {
+        test.test.test.test.perse = 100
+        test = test
+
+        test = null
+        test.test = null
+        test.test.test = null
+
+        var haha = Test
+    }   
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*
+    ass()
+    
+    def ass() {
+    }
+    
+    return true
+    */
+
+/*
+
+// You can import other files with the import keyword
+import thing from "./thing"
+
+// You can define a global variable
+var x = 1
+
+// You can define a function in the global scope
+ 
+// You can create a new object type, which is not instanced immediately
+type object verbSomething {}
+
+@verbRule "shoot" verbSomething
+new verb Shoot with name "Shoot", is container  {
+    def test() {
+        if p + 2 * 10 {
+            print("YES")
+        }
+
+        var test = test[0]["gheaha"]
+        var kusi = test.hahmo.thing
+
+        print("YES")
+    }
+} 
+
+// new creates and instantiates a new object
+// first comes the parent object, then the name of the new object
+// attribute is a builtin object type which inherits from object, it is nothing special
+// object is the root object type of the language
+new object Thing {
+    name "thing"
+    description "A thing" 
+    light is on
+    container false
+        
+    @verb `hit [this]`, "hegaha"
+    def Hit {
+        if light on {
+            print "You hit the thing."
+
+            return true
+        }
+
+        print "You can't see the thing."
+        return false
+    }
+
+    // @ denotes a decorator and is used to add metadata to a function or class
+    // the decorator can have arguments separated by spaces or commas
+    @verb `look [this]` "gahaea"
+    def Look {
+        if light on {
+            print "You see the thing."
+            return true
+        }
+
+        print "You can't see the thing."
+        return false
+    }
+
+    @verb `hit [this] with [with]`
+    def HitWith(with2 : object) {
+        return false
+    }
+}
+
+*/
