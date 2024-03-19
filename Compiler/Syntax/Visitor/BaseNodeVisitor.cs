@@ -17,22 +17,16 @@ public abstract class BaseNodeVisitor : INodeVisitor
         {
             TypeInfoNameNode typeInfoNameNode => VisitTypeNameNode(typeInfoNameNode),
             ProgramNode programNode => VisitProgramNode(programNode),
-            WithExpressionNode withExpressionNode => VisitWithExpressionNode(withExpressionNode),
             BodyBlockNode bodyBlockNode => VisitBodyBlockNode(bodyBlockNode),
             FunctionCallArgumentNode functionCallArgumentNode =>
                 VisitFunctionCallArgumentNode(functionCallArgumentNode),
-            FunctionExpressionNode functionExpressionNode => VisitFunctionExpressionNode(functionExpressionNode),
             MemberAccessNode memberAccessNode => VisitMemberAccessNode(memberAccessNode),
             IdentifierNode identifierNode => VisitIdentifierNode(identifierNode),
-            PropertySetExpressionNode propertySetExpressionNode => VisitPropertySetExpressionNode(
-                propertySetExpressionNode),
             FunctionCallNode functionCallNode => VisitFunctionCallNode(functionCallNode),
-            ImportStatementNode importStatementNode => VisitImportStatementNode(importStatementNode),
             ExpressionNode expressionNode => VisitExpressionNode(expressionNode),
-            FunctionDeclarationArgumentNode functionDeclarationParameterNode => VisitFunctionDeclarationParameterNode(
+            FunctionDeclarationParameterNode functionDeclarationParameterNode => VisitFunctionDeclarationParameterNode(
                 functionDeclarationParameterNode),
             IfStatementNode ifStatementNode => VisitIfStatementNode(ifStatementNode),
-            FlagExpressionNode flagExpressionNode => VisitFlagExpressionNode(flagExpressionNode),
             AnnotationNode annotationNode => VisitAnnotationNode(annotationNode),
             WhileStatementNode whileStatementNode => VisitWhileNode(whileStatementNode),
             ForStatementNode forStatementNode => VisitForStatementNode(forStatementNode),
@@ -42,6 +36,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
             DeclarationNode declarationNode => VisitDeclarationNode(declarationNode),
             AssignmentNode assignmentNode => VisitAssignmentNode(assignmentNode),
             LiteralNode literalNode => VisitLiteralNode(literalNode),
+            EnumShortHandNode enumShortHandNode => VisitEnumShortHandNode(enumShortHandNode),
+            UnaryExpressionNode unaryExpressionNode => VisitUnaryExpressionNode(unaryExpressionNode),
             _ => throw new VisitorError("unhandled base node")
         };
     }
@@ -53,8 +49,18 @@ public abstract class BaseNodeVisitor : INodeVisitor
             VariableDeclarationNode variableDeclaration => VisitVariableDeclarationNode(variableDeclaration),
             FunctionDeclarationNode functionDeclarationNode => VisitFunctionDeclarationNode(functionDeclarationNode),
             ObjectDeclarationNode objectDeclarationNode => VisitObjectDeclarationNode(objectDeclarationNode),
+            EnumDeclarationNode enumDeclarationNode => VisitEnumDeclarationNode(enumDeclarationNode),
+            ObjectVariableOverride objectVariableOverride => VisitObjectVariableOverride(objectVariableOverride),
+            ExternNode externNode => VisitExternNode(externNode),
             _ => throw new VisitorError("unhandled declaration node")
         };
+    }
+
+    public virtual EnumShortHandNode VisitEnumShortHandNode(EnumShortHandNode enumShortHandNode)
+    {
+        enumShortHandNode.Name.Accept(this);
+
+        return enumShortHandNode;
     }
 
     public virtual LiteralNode VisitLiteralNode(LiteralNode literalNode)
@@ -139,10 +145,6 @@ public abstract class BaseNodeVisitor : INodeVisitor
         return programNode;
     }
 
-    public virtual WithExpressionNode VisitWithExpressionNode(WithExpressionNode withExpressionNode)
-    {
-        return withExpressionNode;
-    }
 
     public virtual BodyBlockNode VisitBodyBlockNode(BodyBlockNode bodyBlockNode)
     {
@@ -167,16 +169,17 @@ public abstract class BaseNodeVisitor : INodeVisitor
         return functionCallArgumentNode;
     }
 
-    public virtual FunctionExpressionNode VisitFunctionExpressionNode(FunctionExpressionNode functionExpressionNode)
-    {
-        return functionExpressionNode;
-    }
 
     public virtual VariableDeclarationNode VisitVariableDeclarationNode(VariableDeclarationNode variableDeclarationNode)
     {
         variableDeclarationNode.Name.Accept(this);
         variableDeclarationNode.Value?.Accept(this);
         variableDeclarationNode.TypeName?.Accept(this);
+
+        foreach (var annotation in variableDeclarationNode.Annotations)
+        {
+            annotation.Accept(this);
+        }
 
         return variableDeclarationNode;
     }
@@ -190,9 +193,14 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         functionDeclarationNode.Name.Accept(this);
 
-        foreach (var defParameterNode in functionDeclarationNode.ParameterNodes)
+        foreach (var annotation in functionDeclarationNode.Annotations)
         {
-            defParameterNode.TypeInfoNode.Accept(this);
+            annotation.Accept(this);
+        }
+
+        foreach (var functionDeclarationParameterNode in functionDeclarationNode.ParameterNodes)
+        {
+            functionDeclarationParameterNode.TypeInfoNode.Accept(this);
         }
 
         functionDeclarationNode.Body.Accept(this);
@@ -200,12 +208,6 @@ public abstract class BaseNodeVisitor : INodeVisitor
         functionDeclarationNode.ReturnTypeInfo?.Accept(this);
 
         return functionDeclarationNode;
-    }
-
-    public virtual PropertySetExpressionNode VisitPropertySetExpressionNode(
-        PropertySetExpressionNode propertySetExpressionNode)
-    {
-        return propertySetExpressionNode;
     }
 
     public virtual FunctionCallNode VisitFunctionCallNode(FunctionCallNode functionCallNode)
@@ -220,11 +222,6 @@ public abstract class BaseNodeVisitor : INodeVisitor
         return functionCallNode;
     }
 
-    public virtual ImportStatementNode VisitImportStatementNode(ImportStatementNode importStatementNode)
-    {
-        return importStatementNode;
-    }
-
     public virtual ExpressionNode VisitExpressionNode(ExpressionNode expressionNode)
     {
         expressionNode.Left.Accept(this);
@@ -237,7 +234,12 @@ public abstract class BaseNodeVisitor : INodeVisitor
         ObjectDeclarationNode objectDeclarationNode)
     {
         objectDeclarationNode.Name.Accept(this);
-        objectDeclarationNode.BaseName.Accept(this);
+        objectDeclarationNode.BaseName?.Accept(this);
+
+        foreach (var annotation in objectDeclarationNode.Annotations)
+        {
+            annotation.Accept(this);
+        }
 
         foreach (var field in objectDeclarationNode.Fields)
         {
@@ -248,13 +250,13 @@ public abstract class BaseNodeVisitor : INodeVisitor
         return objectDeclarationNode;
     }
 
-    public virtual FunctionDeclarationArgumentNode VisitFunctionDeclarationParameterNode(
-        FunctionDeclarationArgumentNode functionDeclarationArgumentNode)
+    public virtual FunctionDeclarationParameterNode VisitFunctionDeclarationParameterNode(
+        FunctionDeclarationParameterNode functionDeclarationParameterNode)
     {
-        functionDeclarationArgumentNode.Name.Accept(this);
-        functionDeclarationArgumentNode.TypeInfoNode.Accept(this);
+        functionDeclarationParameterNode.Name.Accept(this);
+        functionDeclarationParameterNode.TypeInfoNode.Accept(this);
 
-        return functionDeclarationArgumentNode;
+        return functionDeclarationParameterNode;
     }
 
     public virtual BooleanLiteralNode VisitBooleanLiteralNode(BooleanLiteralNode booleanLiteralNode)
@@ -269,11 +271,6 @@ public abstract class BaseNodeVisitor : INodeVisitor
         ifStatementNode.NextIf?.Accept(this);
 
         return ifStatementNode;
-    }
-
-    public virtual FlagExpressionNode VisitFlagExpressionNode(FlagExpressionNode flagExpressionNode)
-    {
-        return flagExpressionNode;
     }
 
     public virtual StringLiteralNode VisitStringLiteralNode(StringLiteralNode stringLiteralNode)
@@ -339,6 +336,11 @@ public abstract class BaseNodeVisitor : INodeVisitor
 
     public virtual EnumDeclarationNode VisitEnumDeclarationNode(EnumDeclarationNode enumDeclarationNode)
     {
+        foreach (var annotation in enumDeclarationNode.Annotations)
+        {
+            annotation.Accept(this);
+        }
+
         foreach (var item in enumDeclarationNode.Items)
         {
             item.Accept(this);
@@ -354,5 +356,71 @@ public abstract class BaseNodeVisitor : INodeVisitor
         structureLiteralFieldNode.Field.Accept(this);
 
         return structureLiteralFieldNode;
+    }
+
+    public virtual ObjectVariableOverride VisitObjectVariableOverride(ObjectVariableOverride objectVariableOverride)
+    {
+        objectVariableOverride.Name.Accept(this);
+        objectVariableOverride.Value.Accept(this);
+
+        return objectVariableOverride;
+    }
+
+    public virtual UnaryExpressionNode VisitUnaryExpressionNode(UnaryExpressionNode unaryExpressionNode)
+    {
+        unaryExpressionNode.Value.Accept(this);
+
+        return unaryExpressionNode;
+    }
+
+    public virtual ExternNode VisitExternNode(ExternNode externNode)
+    {
+        return externNode switch
+        {
+            ExternFunctionNode externFunctionNode => VisitExternFunctionNode(externFunctionNode),
+            ExternVariableNode externVariableNode => VisitExternVariableNode(externVariableNode),
+            _ => throw new VisitorError("unhandled extern node")
+        };
+    }
+
+    public virtual ExternFunctionNode VisitExternFunctionNode(ExternFunctionNode externFunctionNode)
+    {
+        externFunctionNode.Name.Accept(this);
+        foreach (var argument in externFunctionNode.ParameterNodes)
+        {
+            argument.Accept(this);
+        }
+
+        externFunctionNode.ReturnType?.Accept(this);
+
+        return externFunctionNode;
+    }
+
+    public virtual ExternVariableNode VisitExternVariableNode(ExternVariableNode externVariableNode)
+    {
+        externVariableNode.Name.Accept(this);
+        externVariableNode.TypeInfoNode.Accept(this);
+
+        return externVariableNode;
+    }
+
+    public virtual EnumDeclarationItemNode VisitEnumDeclarationItemNode(EnumDeclarationItemNode enumDeclarationItemNode)
+    {
+        enumDeclarationItemNode.Name.Accept(this);
+        foreach (var parameter in enumDeclarationItemNode.ParameterNodes)
+        {
+            parameter.Accept(this);
+        }
+
+        return enumDeclarationItemNode;
+    }
+
+    public virtual EnumDeclarationItemParameterNode VisitEnumDeclarationItemParameterNode(
+        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode)
+    {
+        enumDeclarationItemParameterNode.Name.Accept(this);
+        enumDeclarationItemParameterNode.TypeInfoNode.Accept(this);
+
+        return enumDeclarationItemParameterNode;
     }
 }

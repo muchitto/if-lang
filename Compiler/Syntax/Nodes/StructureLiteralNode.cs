@@ -2,7 +2,8 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class StructureLiteralNode(List<StructureLiteralFieldNode> fields) : LiteralNode
+public class StructureLiteralNode(NodeContext nodeContext, List<StructureLiteralFieldNode> fields)
+    : LiteralNode(nodeContext)
 {
     public List<StructureLiteralFieldNode> Fields { get; } = fields;
 

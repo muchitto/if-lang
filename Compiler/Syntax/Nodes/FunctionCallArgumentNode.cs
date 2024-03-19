@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class FunctionCallArgumentNode(BaseNode value) : BaseNode
+public class FunctionCallArgumentNode(NodeContext nodeContext, BaseNode value) : BaseNode(nodeContext)
 {
     public BaseNode Value = value;
 

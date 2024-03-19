@@ -2,7 +2,8 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class ExpressionNode(BaseNode left, BaseNode right, Operator op) : BaseNode
+public class ExpressionNode(NodeContext nodeContext, BaseNode left, BaseNode right, Operator op)
+    : BaseNode(nodeContext)
 {
     public BaseNode Left = left;
     public Operator Operator = op;

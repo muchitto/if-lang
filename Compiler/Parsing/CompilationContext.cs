@@ -1,4 +1,4 @@
-using Compiler.Lexing;
+using Compiler.ErrorHandling;
 
 namespace Compiler.Parsing;
 

@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class ProgramNode(List<DeclarationNode> declarations) : BaseNode
+public class ProgramNode(NodeContext nodeContext, List<DeclarationNode> declarations) : BaseNode(nodeContext)
 {
     public List<DeclarationNode> Declarations { get; } = declarations;
 

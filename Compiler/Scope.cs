@@ -7,7 +7,8 @@ public enum ScopeType
     Program,
     BlockBody,
     Function,
-    Object
+    Object,
+    Enum
 }
 
 public class Scope(Scope? parent, ScopeType type, BaseNode attachedNode)

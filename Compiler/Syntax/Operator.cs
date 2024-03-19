@@ -34,7 +34,8 @@ public enum Operator
     BitwiseOrAssign,
     BitwiseXorAssign,
     BitwiseLeftShiftAssign,
-    BitwiseRightShiftAssign
+    BitwiseRightShiftAssign,
+    Is
 }
 
 public static class OperatorExtensions
@@ -47,7 +48,8 @@ public static class OperatorExtensions
             Operator.Multiply or Operator.Divide or Operator.Modulo => 6,
             Operator.Add or Operator.Subtract => 5,
             Operator.BitwiseLeftShift or Operator.BitwiseRightShift => 4,
-            Operator.GreaterThan or Operator.LessThan or Operator.GreaterThanOrEqual or Operator.LessThanOrEqual => 3,
+            Operator.GreaterThan or Operator.LessThan or Operator.GreaterThanOrEqual or Operator.LessThanOrEqual
+                or Operator.Is => 3,
             Operator.Equal or Operator.NotEqual => 2,
             Operator.And => 1,
             Operator.Or => 0,

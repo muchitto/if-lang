@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class TypeInfoArrayNode(TypeInfoNode baseType) : TypeInfoNode
+public class TypeInfoArrayNode(NodeContext nodeContext, TypeInfoNode baseType) : TypeInfoNode(nodeContext)
 {
     public TypeInfoNode BaseType { get; } = baseType;
 

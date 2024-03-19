@@ -5,30 +5,61 @@ using Compiler.Syntax.Nodes;
 
 namespace Compiler.Parsing;
 
-public class Parser
+public class Parser(CompilationContext context)
 {
-    public Parser(CompilationContext context)
-    {
-        Context = context;
-        Lexer = new Lexer(context, new LexerOptions());
-    }
+    private Token? _peekedToken;
 
-    private CompilationContext Context { get; }
-    private Lexer Lexer { get; }
+    private Stack<bool> RecordNewLines { get; } = new();
 
-    private CompileError.SyntaxError NextSyntaxError(string message)
+    private bool ShouldRecordNewLines => RecordNewLines.Count > 0 && RecordNewLines.Peek();
+
+    private CompilationContext Context { get; } = context;
+    private Lexer Lexer { get; } = new(context);
+
+    private CompileError.ParseError NextSyntaxError(string message)
     {
-        return new CompileError.SyntaxError(message, PeekToken().PositionData);
+        return new CompileError.ParseError(message, PeekToken().PositionData);
     }
 
     private Token GetToken()
     {
-        return Lexer.GetToken();
+        Token token;
+
+        if (_peekedToken != null)
+        {
+            token = _peekedToken.Value;
+            _peekedToken = null;
+            return token;
+        }
+
+
+        token = Lexer.GetToken();
+
+        while (token.Is(TokenType.NewLine) && !ShouldRecordNewLines)
+        {
+            token = Lexer.GetToken();
+        }
+
+        return token;
     }
 
     private Token PeekToken()
     {
-        return Lexer.PeekToken();
+        if (_peekedToken != null)
+        {
+            return _peekedToken.Value;
+        }
+
+        var token = GetToken();
+
+        while (token.Is(TokenType.NewLine) && !ShouldRecordNewLines)
+        {
+            token = GetToken();
+        }
+
+        _peekedToken = token;
+
+        return token;
     }
 
     private bool IsNext(TokenType type, string? value = null)
@@ -69,20 +100,17 @@ public class Parser
         }
     }
 
-    private void ExpectEat(TokenType type, string? msg = null)
-    {
-        Expect(type);
-        GetToken();
-    }
-
     private void ExpectValue(TokenType type, string value, string? msg = null)
     {
-        if (!IsNext(type, value))
+        if (IsNext(type, value))
         {
-            var message = msg ?? $"expected {type} but got {PeekToken().Type}";
-
-            throw NextSyntaxError(message);
+            return;
         }
+
+        var message = msg ??
+                      $"expected {type} with value {value} but got {PeekToken().Type} with value {PeekToken().Value}";
+
+        throw NextSyntaxError(message);
     }
 
     private void ExpectEatValue(TokenType type, string value, string? msg = null)
@@ -146,19 +174,6 @@ public class Parser
         return IsNewLine() || IsNext(TokenType.Symbol, ";");
     }
 
-    // Newline or semicolon
-    private void SentenceEnd()
-    {
-        if (IsSentenceEnd())
-        {
-            GetToken();
-        }
-        else
-        {
-            throw NextSyntaxError("expected newline or semicolon");
-        }
-    }
-
     private void ExpectNewLine()
     {
         if (!IsNewLine())
@@ -167,11 +182,26 @@ public class Parser
         }
     }
 
-    private FunctionDeclarationNode ParseFunctionDeclaration()
+    private void ExpectEatSentenceEnd(string? msg = null)
     {
-        var name = ParseSingleIdentifier();
+        ExpectSentenceEnd(msg);
+        GetToken();
+    }
 
-        var parameters = new List<FunctionDeclarationArgumentNode>();
+    private void ExpectSentenceEnd(string? msg = null)
+    {
+        if (IsSentenceEnd())
+        {
+            return;
+        }
+
+        var message = msg ?? "expected newline or semicolon";
+        throw NextSyntaxError(message);
+    }
+
+    private List<FunctionDeclarationParameterNode> ParseFunctionDeclarationArguments()
+    {
+        var parameters = new List<FunctionDeclarationParameterNode>();
 
         if (IsNextEat(TokenType.Symbol, "("))
         {
@@ -189,7 +219,8 @@ public class Parser
                     throw NextSyntaxError("expected type");
                 }
 
-                parameters.Add(new FunctionDeclarationArgumentNode(parameterName, type));
+                var parameterContext = new NodeContext(parameterName.NodeContext.PositionData);
+                parameters.Add(new FunctionDeclarationParameterNode(parameterContext, parameterName, type));
 
                 if (IsNextEat(TokenType.Symbol, ","))
                 {
@@ -202,7 +233,16 @@ public class Parser
             ExpectEatValue(TokenType.Symbol, ")");
         }
 
-        TypeInfoNode returnType = null;
+        return parameters;
+    }
+
+    private FunctionDeclarationNode ParseFunctionDeclaration(List<AnnotationNode> annotations)
+    {
+        var name = ParseSingleIdentifier();
+
+        var parameters = ParseFunctionDeclarationArguments();
+
+        TypeInfoNode? returnType = null;
         if (IsNextEat(TokenType.Symbol, "->"))
         {
             returnType = ParseTypeInfo();
@@ -210,12 +250,14 @@ public class Parser
 
         var body = ParseBlock();
 
-        return new FunctionDeclarationNode(name, parameters, returnType, body);
+        var functionDeclarationContext = new NodeContext(name.NodeContext.PositionData);
+
+        return new FunctionDeclarationNode(functionDeclarationContext, name, parameters, returnType, body, annotations);
     }
 
     private BodyBlockNode ParseBlock()
     {
-        ExpectEatValue(TokenType.Symbol, "{");
+        ExpectEatValue(TokenType.Symbol, "{", "expected a start of a block using {");
 
         var statements = new List<BaseNode>();
 
@@ -223,69 +265,52 @@ public class Parser
 
         while (!IsNext(TokenType.Symbol, "}"))
         {
-            Lexer.LexerOptions.RecordNewLines.Push(true);
-
-            var statement = ParseStatement();
-
-            SentenceEnd();
-
-            Lexer.LexerOptions.RecordNewLines.Pop();
+            var statement = ParseBlockStatementOrDeclaration();
 
             statements.Add(statement);
         }
 
-
         ExpectEatValue(TokenType.Symbol, "}");
 
-        return new BodyBlockNode(statements);
+        NodeContext blocNodeContext;
+
+        if (statements.Count == 0)
+        {
+            blocNodeContext = new NodeContext(PeekToken().PositionData);
+        }
+        else
+        {
+            blocNodeContext = new NodeContext(statements.First().NodeContext, statements.Last().NodeContext);
+        }
+
+        return new BodyBlockNode(blocNodeContext, statements);
     }
 
-    private BaseNode ParseStatement()
+    private BaseNode? ParseStatement()
     {
-        if (IsNext(TokenType.Keyword, "def"))
-        {
-            return ParseDeclaration();
-        }
-
-        if (IsNextEat(TokenType.Keyword, "var"))
-        {
-            return ParseVariableDeclaration();
-        }
+        var nextToken = PeekToken();
 
         if (IsNextEat(TokenType.Keyword, "return"))
         {
+            var returnContext = new NodeContext(nextToken.PositionData);
+
             if (IsSentenceEnd())
             {
-                return new ReturnStatementNode(null);
+                return new ReturnStatementNode(returnContext, null);
             }
 
             var expression = ParseExpression();
-            return new ReturnStatementNode(expression);
-        }
-
-        if (IsNextEat(TokenType.Keyword, "if"))
-        {
-            return ParseIfStatement();
-        }
-
-        if (IsNextEat(TokenType.Keyword, "for"))
-        {
-            return ParseForStatement();
-        }
-
-        if (IsNextEat(TokenType.Keyword, "while"))
-        {
-            return ParseWhileStatement();
+            return new ReturnStatementNode(returnContext, expression);
         }
 
         if (IsNextEat(TokenType.Keyword, "break"))
         {
-            return new BreakStatementNode();
+            return new BreakStatementNode(new NodeContext(nextToken.PositionData));
         }
 
         if (IsNextEat(TokenType.Keyword, "continue"))
         {
-            return new ContinueStatementNode();
+            return new ContinueStatementNode(new NodeContext(nextToken.PositionData));
         }
 
         if (IsNext(TokenType.Identifier))
@@ -298,51 +323,297 @@ public class Parser
 
                 var value = ParseExpression();
 
-                return new AssignmentNode(identifier, value, op);
+                var assignmentNodeContext = new NodeContext(identifier.NodeContext, value.NodeContext);
+
+                return new AssignmentNode(assignmentNodeContext, identifier, value, op);
             }
 
             return ParseFunctionCall(identifier);
         }
 
-        throw NextSyntaxError("expected statement");
+        throw NextSyntaxError("expected a statement");
+    }
+
+    private BaseNode ParseBlockStatementOrDeclaration()
+    {
+        if (IsNext(TokenType.Keyword, "var") || IsNext(TokenType.Keyword, "def") || IsNext(TokenType.Keyword, "new"))
+        {
+            return ParseDeclaration();
+        }
+
+        if (IsNext(TokenType.Keyword, "if") || IsNext(TokenType.Keyword, "for") || IsNext(TokenType.Keyword, "while"))
+        {
+            return ParseControlFlowStatement();
+        }
+
+        StartRecordNewLinesMode(true);
+
+        var statement = ParseStatement();
+
+        ExpectEatSentenceEnd();
+
+        EndRecordNewLinesMode();
+
+        return statement;
+    }
+
+    private BaseNode? ParseControlFlowStatement()
+    {
+        BaseNode? controlFlowStatement = null;
+
+        if (IsNextEat(TokenType.Keyword, "if"))
+        {
+            controlFlowStatement = ParseIfStatement();
+        }
+        else if (IsNextEat(TokenType.Keyword, "for"))
+        {
+            controlFlowStatement = ParseForStatement();
+        }
+        else if (IsNextEat(TokenType.Keyword, "while"))
+        {
+            controlFlowStatement = ParseWhileStatement();
+        }
+
+        if (controlFlowStatement == null)
+        {
+            throw NextSyntaxError("expected a control flow statement");
+        }
+
+        return controlFlowStatement;
+    }
+
+    private void StartRecordNewLinesMode(bool mode)
+    {
+        RecordNewLines.Push(mode);
+    }
+
+    private void EndRecordNewLinesMode()
+    {
+        RecordNewLines.Pop();
     }
 
     private DeclarationNode ParseDeclaration()
     {
-        Lexer.LexerOptions.RecordNewLines.Push(false);
+        var annotations = CollectAnnotations();
 
         DeclarationNode declaration;
         if (IsNextEat(TokenType.Keyword, "var"))
         {
-            declaration = ParseVariableDeclaration();
+            StartRecordNewLinesMode(true);
+
+            declaration = ParseVariableDeclaration(annotations);
+
+            ExpectEatSentenceEnd();
+
+            EndRecordNewLinesMode();
         }
         else if (IsNextEat(TokenType.Keyword, "def"))
         {
-            declaration = ParseFunctionDeclaration();
+            declaration = ParseFunctionDeclaration(annotations);
         }
         else if (IsNextEat(TokenType.Keyword, "new"))
         {
-            declaration = ParseObjectDeclaration();
+            declaration = ParseObjectDeclaration(annotations);
+        }
+        else if (IsNextEat(TokenType.Keyword, "enum"))
+        {
+            declaration = ParseEnumDeclaration(annotations);
         }
         else
         {
             throw NextSyntaxError("expected a declaration");
         }
 
-        Lexer.LexerOptions.RecordNewLines.Pop();
-
         return declaration;
     }
 
-    private ObjectDeclarationNode ParseObjectDeclaration()
+    private EnumDeclarationNode ParseEnumDeclaration(List<AnnotationNode> annotations)
+    {
+        var name = ParseSingleIdentifier();
+
+        var items = new List<EnumDeclarationItemNode>();
+
+        ExpectEatValue(TokenType.Symbol, "{");
+
+        while (!IsNext(TokenType.Symbol, "}"))
+        {
+            var itemName = ParseSingleIdentifier();
+
+            var parameters = new List<EnumDeclarationItemParameterNode>();
+
+            if (parameters.Any(p => p.Name.Name == itemName.Name))
+            {
+                throw NextSyntaxError($"parameter {itemName.Name} already exists in the enum");
+            }
+
+            if (IsNextEat(TokenType.Symbol, "("))
+            {
+                while (!IsNext(TokenType.Symbol, ")"))
+                {
+                    var parameterName = ParseSingleIdentifier();
+
+                    ExpectEatValue(TokenType.Symbol, ":");
+
+                    var parameterType = ParseTypeInfo();
+
+                    parameters.Add(new EnumDeclarationItemParameterNode(parameterName.NodeContext, parameterName,
+                        parameterType));
+
+                    if (IsNextEat(TokenType.Symbol, ","))
+                    {
+                        continue;
+                    }
+
+                    break;
+                }
+
+                ExpectEatValue(TokenType.Symbol, ")");
+            }
+
+            var enumItem = new EnumDeclarationItemNode(itemName.NodeContext, itemName, parameters);
+
+            items.Add(enumItem);
+
+            if (IsNextEat(TokenType.Symbol, ","))
+            {
+                continue;
+            }
+
+            break;
+        }
+
+        ExpectEatValue(TokenType.Symbol, "}");
+
+        var enumDeclarationNodeContext = new NodeContext(name.NodeContext.PositionData);
+
+        return new EnumDeclarationNode(
+            enumDeclarationNodeContext,
+            name,
+            items,
+            annotations
+        );
+    }
+
+    private AnnotationNode ParseAnnotation()
+    {
+        var name = ParseSingleIdentifier();
+
+        var arguments = new List<BaseNode>();
+
+        var usesParentheses = IsNextEat(TokenType.Symbol, "(");
+
+        if (usesParentheses)
+        {
+            while (!IsNext(TokenType.Symbol, ")"))
+            {
+                var argument = ParseExpression();
+
+                arguments.Add(argument);
+
+                if (IsNextEat(TokenType.Symbol, ","))
+                {
+                    continue;
+                }
+
+                break;
+            }
+
+            ExpectEatValue(TokenType.Symbol, ")");
+        }
+        else
+        {
+            while (!IsSentenceEnd())
+            {
+                var argument = ParseExpression();
+
+                arguments.Add(argument);
+
+                if (IsNextEat(TokenType.Symbol, ","))
+                {
+                    continue;
+                }
+
+                break;
+            }
+        }
+
+        var annotationNodeContext = new NodeContext(name.NodeContext.PositionData);
+
+        return new AnnotationNode(annotationNodeContext, name, arguments);
+    }
+
+    private ExternNode ParseExternDeclaration()
+    {
+        if (IsNextEat(TokenType.Keyword, "var"))
+        {
+            return ParseExternVariableDeclaration();
+        }
+
+        if (IsNextEat(TokenType.Keyword, "def"))
+        {
+            return ParseExternFunctionDeclaration();
+        }
+
+        throw NextSyntaxError("expected an extern declaration. either a function or a variable");
+    }
+
+    private ExternVariableNode ParseExternVariableDeclaration()
+    {
+        var name = ParseSingleIdentifier();
+
+        ExpectEatValue(TokenType.Symbol, ":");
+
+        var type = ParseTypeInfo();
+
+        var externVariableNodeContext = new NodeContext(name.NodeContext.PositionData);
+
+        return new ExternVariableNode(externVariableNodeContext, name, type);
+    }
+
+    private ExternFunctionNode ParseExternFunctionDeclaration()
+    {
+        var name = ParseSingleIdentifier();
+
+        var parameters = ParseFunctionDeclarationArguments();
+
+        TypeInfoNode? returnType = null;
+        if (IsNextEat(TokenType.Symbol, "->"))
+        {
+            returnType = ParseTypeInfo();
+        }
+
+        var externFunctionNodeContext = new NodeContext(name.NodeContext.PositionData);
+
+        return new ExternFunctionNode(externFunctionNodeContext, name, parameters, returnType);
+    }
+
+
+    private ObjectDeclarationNode ParseObjectDeclaration(List<AnnotationNode> annotations)
     {
         var isImmediatelyInstanced = !IsNextEat(TokenType.Keyword, "type");
 
-        var baseName = ParseSingleIdentifier();
+        // It should get the first identifier and IF after that it finds the
+        // "called" identifier, it should use the first identifier as the base name
+        // and the second as the class name. But if it doesn't find the "called"
+        // identifier, it should use the first identifier as the class name and
+        // the base name should be null.
+        var firstIdentifier = ParseSingleIdentifier();
 
-        ExpectEatValue(TokenType.Identifier, "called");
+        IdentifierNode name;
+        TypeInfoNameNode? baseName = null;
 
-        var name = ParseSingleIdentifier();
+        var objectDeclarationNodeContext = new NodeContext(firstIdentifier.NodeContext.PositionData);
+        if (IsNextEat(TokenType.Identifier, "called"))
+        {
+            baseName = new TypeInfoNameNode(firstIdentifier.NodeContext, firstIdentifier.Name);
+            name = ParseSingleIdentifier();
+
+            objectDeclarationNodeContext = name.NodeContext;
+        }
+        else
+        {
+            name = firstIdentifier;
+        }
 
         ExpectEatValue(TokenType.Symbol, "{");
 
@@ -350,14 +621,82 @@ public class Parser
 
         while (!IsNext(TokenType.Symbol, "}"))
         {
-            var field = ParseDeclaration();
+            var field = ParseObjectLevelDeclaration();
 
             fields.Add(field);
         }
 
         ExpectEatValue(TokenType.Symbol, "}");
 
-        return new ObjectDeclarationNode(isImmediatelyInstanced, new TypeInfoNameNode(baseName.Name), name, fields);
+        return new ObjectDeclarationNode(
+            objectDeclarationNodeContext,
+            isImmediatelyInstanced,
+            baseName,
+            name,
+            fields,
+            annotations
+        );
+    }
+
+    private List<AnnotationNode> CollectAnnotations()
+    {
+        var annotations = new List<AnnotationNode>();
+
+        if (IsNext(TokenType.Symbol, "@"))
+        {
+            StartRecordNewLinesMode(true);
+            while (IsNextEat(TokenType.Symbol, "@"))
+            {
+                var annotation = ParseAnnotation();
+
+                ExpectEatSentenceEnd("expected newline after annotation");
+
+                annotations.Add(annotation);
+            }
+
+            EndRecordNewLinesMode();
+        }
+
+        return annotations;
+    }
+
+    private DeclarationNode ParseObjectLevelDeclaration()
+    {
+        var annotations = CollectAnnotations();
+
+        DeclarationNode declaration;
+        if (IsNextEat(TokenType.Keyword, "var"))
+        {
+            StartRecordNewLinesMode(true);
+
+            declaration = ParseVariableDeclaration(annotations);
+
+            ExpectEatSentenceEnd();
+
+            EndRecordNewLinesMode();
+        }
+        else if (IsNextEat(TokenType.Keyword, "def"))
+        {
+            declaration = ParseFunctionDeclaration(annotations);
+        }
+        else if (IsNext(TokenType.Identifier))
+        {
+            var name = ParseSingleIdentifier();
+
+            ExpectEatValue(TokenType.Symbol, "=");
+
+            var value = ParseExpression();
+
+            var objectVariableOverrideNodeContext = new NodeContext(name.NodeContext, value.NodeContext);
+
+            declaration = new ObjectVariableOverride(objectVariableOverrideNodeContext, name, value);
+        }
+        else
+        {
+            throw NextSyntaxError("expected a declaration");
+        }
+
+        return declaration;
     }
 
     private WhileStatementNode ParseWhileStatement()
@@ -366,7 +705,9 @@ public class Parser
 
         var body = ParseBlock();
 
-        return new WhileStatementNode(condition, body);
+        var whileNodeContext = new NodeContext(condition.NodeContext, body.NodeContext);
+
+        return new WhileStatementNode(whileNodeContext, condition, body);
     }
 
     private ForStatementNode ParseForStatement()
@@ -386,7 +727,9 @@ public class Parser
 
         var body = ParseBlock();
 
-        return new ForStatementNode(iterable, iteratorVariable, body);
+        var forNodeContext = new NodeContext(iteratorVariable.NodeContext, body.NodeContext);
+
+        return new ForStatementNode(forNodeContext, iterable, iteratorVariable, body);
     }
 
     private IfStatementNode ParseIfStatement()
@@ -399,7 +742,9 @@ public class Parser
 
         if (!IsNextEat(TokenType.Keyword, "else"))
         {
-            return new IfStatementNode(condition, body, nextIf);
+            var ifNodeContext = new NodeContext(condition.NodeContext, body.NodeContext);
+
+            return new IfStatementNode(ifNodeContext, condition, body, nextIf);
         }
 
         if (IsNextEat(TokenType.Keyword, "if"))
@@ -410,19 +755,29 @@ public class Parser
         {
             var elseBody = ParseBlock();
 
-            var elseStatement = new IfStatementNode(null, elseBody, null);
+            var ifNodeContext = new NodeContext(condition.NodeContext, body.NodeContext);
 
-            return new IfStatementNode(condition, body, elseStatement);
+            var elseNodeContext = elseBody.NodeContext;
+            var elseStatement = new IfStatementNode(elseNodeContext, null, elseBody, null);
+
+            return new IfStatementNode(ifNodeContext, condition, body, elseStatement);
         }
 
-        return new IfStatementNode(condition, body, nextIf);
+        return new IfStatementNode(
+            new NodeContext(condition.NodeContext, nextIf.NodeContext),
+            condition,
+            body,
+            nextIf
+        );
     }
 
     private TypeInfoNode ParseTypeInfo()
     {
         if (IsNext(TokenType.Identifier))
         {
-            var typeName = new TypeInfoNameNode(GetToken().Value);
+            var typeNameToken = GetToken();
+            var typeNameContext = new NodeContext(typeNameToken.PositionData);
+            var typeName = new TypeInfoNameNode(typeNameContext, typeNameToken.Value);
 
             return ParseTypeInfoPart(typeName);
         }
@@ -451,7 +806,10 @@ public class Parser
 
             ExpectEatValue(TokenType.Symbol, "}");
 
-            return ParseTypeInfoPart(new TypeInfoStructureNode(fields));
+            var structureNodeContext =
+                new NodeContext(fields.First().Value.NodeContext, fields.Last().Value.NodeContext);
+
+            return ParseTypeInfoPart(new TypeInfoStructureNode(structureNodeContext, fields));
         }
 
         throw NextSyntaxError("expected type info");
@@ -463,23 +821,23 @@ public class Parser
         {
             ExpectEatValue(TokenType.Symbol, "]");
 
-            return ParseTypeInfoPart(new TypeInfoArrayNode(typeInfo));
+            return ParseTypeInfoPart(new TypeInfoArrayNode(typeInfo.NodeContext, typeInfo));
         }
 
         return typeInfo;
     }
 
-    private VariableDeclarationNode ParseVariableDeclaration()
+    private VariableDeclarationNode ParseVariableDeclaration(List<AnnotationNode> annotationNodes)
     {
-        var name = new IdentifierNode(GetToken().Value);
+        var name = ParseSingleIdentifier();
 
-        TypeInfoNode type = null;
+        TypeInfoNode? type = null;
         if (IsNextEat(TokenType.Symbol, ":"))
         {
             type = ParseTypeInfo();
         }
 
-        BaseNode value = null;
+        BaseNode? value = null;
         if (IsNextEat(TokenType.Symbol, "="))
         {
             value = ParseExpression();
@@ -490,14 +848,25 @@ public class Parser
             throw NextSyntaxError("expected type or value");
         }
 
-        return new VariableDeclarationNode(name, type, value);
+        NodeContext variableDeclarationNodeContext;
+
+        if (value != null)
+        {
+            variableDeclarationNodeContext = new NodeContext(name.NodeContext, value.NodeContext);
+        }
+        else
+        {
+            variableDeclarationNodeContext = name.NodeContext;
+        }
+
+        return new VariableDeclarationNode(variableDeclarationNodeContext, name, type, value, annotationNodes);
     }
 
     private BaseNode ParseExpressionContinue(BaseNode lhs, int minPrecedence)
     {
         var nextToken = PeekToken();
 
-        if (nextToken.Type == TokenType.Operator)
+        if (!nextToken.IsOperator())
         {
             return lhs;
         }
@@ -512,20 +881,49 @@ public class Parser
 
         GetToken();
 
-        var rhs = ParseExpression(precedence);
+        BaseNode rhs;
+
+        if (op == Operator.Is)
+        {
+            rhs = ParseTypeInfo();
+        }
+        else
+        {
+            rhs = ParseExpression(precedence);
+        }
+
+        var expressionNodeContext = new NodeContext(lhs.NodeContext, rhs.NodeContext);
 
         return new ExpressionNode(
+            expressionNodeContext,
             lhs,
-            lhs,
+            rhs,
             op
         );
     }
 
     private BaseNode ParseExpression(int minPrecedence = 0)
     {
+        if (IsNextEat(TokenType.Symbol, "("))
+        {
+            GetToken();
+            var expression = ParseExpression();
+            ExpectEatValue(TokenType.Symbol, ")");
+            return expression;
+        }
+
+        if (IsNext(TokenType.Operator, "!"))
+        {
+            var operatorToken = GetToken();
+            var op = operatorToken.ToOperator();
+            var value = ParseExpression();
+            var unaryExpressionNodeContext = new NodeContext(operatorToken.PositionData);
+            return new UnaryExpressionNode(unaryExpressionNodeContext, op, value);
+        }
+
         var lhs = ParsePrimary();
 
-        if (!IsNext(TokenType.Operator))
+        if (!PeekToken().IsOperator())
         {
             return lhs;
         }
@@ -547,24 +945,26 @@ public class Parser
 
     private BaseNode ParsePrimary()
     {
+        var nextToken = PeekToken();
+        var nextNodeContext = new NodeContext(nextToken.PositionData);
         if (IsNext(TokenType.Number))
         {
-            return new NumberLiteralNode(GetToken().Value);
+            return new NumberLiteralNode(nextNodeContext, GetToken().Value);
         }
 
         if (IsNext(TokenType.String))
         {
-            return new StringLiteralNode(GetToken().Value);
+            return new StringLiteralNode(nextNodeContext, GetToken().Value);
         }
 
         if (IsNext(TokenType.Keyword, "true") || IsNext(TokenType.Keyword, "false"))
         {
-            return new BooleanLiteralNode(GetToken().Value == "true");
+            return new BooleanLiteralNode(nextNodeContext, GetToken().Value == "true");
         }
 
         if (IsNextEat(TokenType.Keyword, "null"))
         {
-            return new NullLiteralNode();
+            return new NullLiteralNode(nextNodeContext);
         }
 
         if (IsNext(TokenType.Symbol, "{"))
@@ -577,12 +977,17 @@ public class Parser
             return ParseArrayLiteral();
         }
 
+        if (IsNextEat(TokenType.Symbol, "."))
+        {
+            return ParseEnumShortHand();
+        }
+
         if (!IsNext(TokenType.Identifier))
         {
             throw NextSyntaxError($"unexpected token {PeekToken().Type}");
         }
 
-        var identifier = new IdentifierNode(GetToken().Value);
+        var identifier = ParseSingleIdentifier();
 
         if (IsNextEat(TokenType.Symbol, "("))
         {
@@ -602,9 +1007,20 @@ public class Parser
         return identifier;
     }
 
+    private EnumShortHandNode ParseEnumShortHand()
+    {
+        var enumName = ParseSingleIdentifier();
+
+        var enumShortHandNodeContext = new NodeContext(enumName.NodeContext.PositionData);
+
+        return new EnumShortHandNode(enumShortHandNodeContext, enumName);
+    }
+
     private ArrayLiteralNode ParseArrayLiteral()
     {
         var elements = new List<BaseNode>();
+
+        StartRecordNewLinesMode(true);
 
         ExpectEatValue(TokenType.Symbol, "[");
 
@@ -624,12 +1040,27 @@ public class Parser
 
         ExpectEatValue(TokenType.Symbol, "]");
 
-        return new ArrayLiteralNode(elements);
+        NodeContext arrayLiteralNodeContext;
+
+        if (elements.Count == 0)
+        {
+            arrayLiteralNodeContext = new NodeContext(PeekToken().PositionData);
+        }
+        else
+        {
+            arrayLiteralNodeContext = new NodeContext(elements.First().NodeContext, elements.Last().NodeContext);
+        }
+
+        EndRecordNewLinesMode();
+
+        return new ArrayLiteralNode(arrayLiteralNodeContext, elements);
     }
 
     private StructureLiteralNode ParseStructureLiteral()
     {
         var fields = new List<StructureLiteralFieldNode>();
+
+        StartRecordNewLinesMode(false);
 
         ExpectEatValue(TokenType.Symbol, "{");
 
@@ -642,7 +1073,7 @@ public class Parser
 
             if (fieldExists)
             {
-                throw new CompileError.SyntaxError(
+                throw new CompileError.ParseError(
                     $"field {fieldName.Name} already exists in the structure",
                     identifierPosition
                 );
@@ -652,7 +1083,9 @@ public class Parser
 
             var fieldValue = ParseExpression();
 
-            fields.Add(new StructureLiteralFieldNode(fieldName, fieldValue));
+            var fieldNodeContext = new NodeContext(fieldName.NodeContext, fieldValue.NodeContext);
+
+            fields.Add(new StructureLiteralFieldNode(fieldNodeContext, fieldName, fieldValue));
 
             if (IsNextEat(TokenType.Symbol, ","))
             {
@@ -664,7 +1097,10 @@ public class Parser
 
         ExpectEatValue(TokenType.Symbol, "}");
 
-        return new StructureLiteralNode(fields);
+        EndRecordNewLinesMode();
+
+        var structureLiteralNodeContext = new NodeContext(fields.First().NodeContext, fields.Last().NodeContext);
+        return new StructureLiteralNode(structureLiteralNodeContext, fields);
     }
 
     private FunctionCallNode ParseFunctionCall(IdentifierNode functionName)
@@ -685,7 +1121,7 @@ public class Parser
         {
             var expression = ParseExpression();
 
-            arguments.Add(new FunctionCallArgumentNode(expression));
+            arguments.Add(new FunctionCallArgumentNode(expression.NodeContext, expression));
 
             if (IsNextEat(TokenType.Symbol, ","))
             {
@@ -697,7 +1133,7 @@ public class Parser
 
         ExpectEatValue(TokenType.Symbol, ")");
 
-        return new FunctionCallNode(functionName, arguments);
+        return new FunctionCallNode(functionName.NodeContext, functionName, arguments);
     }
 
     // Function call can be used with parentheses or without
@@ -709,7 +1145,7 @@ public class Parser
         {
             var expression = ParseExpression();
 
-            arguments.Add(new FunctionCallArgumentNode(expression));
+            arguments.Add(new FunctionCallArgumentNode(expression.NodeContext, expression));
 
             if (IsNextEat(TokenType.Symbol, ","))
             {
@@ -719,16 +1155,18 @@ public class Parser
             break;
         }
 
-        return new FunctionCallNode(functionName, arguments);
+        var functionCallNodeContext = new NodeContext(functionName.NodeContext, arguments.Last().NodeContext);
+        return new FunctionCallNode(functionCallNodeContext, functionName, arguments);
     }
 
     private MemberAccessNode ParseMemberAccess(IdentifierNode baseObject)
     {
         while (true)
         {
-            var member = ParseSingleIdentifier();
+            BaseNode member = ParseSingleIdentifier();
 
-            var memberAccess = new MemberAccessNode(baseObject, member);
+            var memberAccessNodeContext = new NodeContext(baseObject.NodeContext, member.NodeContext);
+            var memberAccess = new MemberAccessNode(memberAccessNodeContext, baseObject, member);
 
             if (IsNextEat(TokenType.Symbol, "."))
             {
@@ -736,6 +1174,10 @@ public class Parser
                 continue;
             }
 
+            if (member is IdentifierNode identifierMember && IsNextEat(TokenType.Symbol, "("))
+            {
+                member = ParseFunctionCallWithParentheses(identifierMember);
+            }
 
             return memberAccess;
         }
@@ -748,7 +1190,9 @@ public class Parser
             throw NextSyntaxError("expected an identifier");
         }
 
-        return new IdentifierNode(GetToken().Value);
+        var identifierNodeContext = new NodeContext(PeekToken().PositionData);
+
+        return new IdentifierNode(identifierNodeContext, GetToken().Value);
     }
 
     private IdentifierNode ParseIdentifier()
@@ -763,18 +1207,51 @@ public class Parser
         return ParseMemberAccess(identifier);
     }
 
+    private DeclarationNode ParseProgramLevelDeclaration()
+    {
+        if (IsNextEat(TokenType.Keyword, "extern"))
+        {
+            StartRecordNewLinesMode(true);
+
+            var externDeclaration = ParseExternDeclaration();
+
+            ExpectEatSentenceEnd();
+
+            EndRecordNewLinesMode();
+
+            return externDeclaration;
+        }
+
+        return ParseDeclaration();
+    }
+
     public ProgramNode Parse()
     {
         var declarations = new List<DeclarationNode>();
 
+        var topLevelDeclarationsOver = false;
+
         while (!IsEnd())
         {
-            var declaration = ParseDeclaration();
+            var declaration = ParseProgramLevelDeclaration();
+
+            if (declaration is ExternNode)
+            {
+                if (topLevelDeclarationsOver)
+                {
+                    throw NextSyntaxError("extern declarations should be at the top of the file");
+                }
+            }
+            else
+            {
+                topLevelDeclarationsOver = true;
+            }
 
             declarations.Add(declaration);
         }
 
-        return new ProgramNode(declarations);
+        var programNodeContext = new NodeContext(declarations.First().NodeContext, declarations.Last().NodeContext);
+        return new ProgramNode(programNodeContext, declarations);
     }
 
     private bool IsEnd()

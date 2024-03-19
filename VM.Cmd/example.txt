@@ -1,4 +1,31 @@
-// a programming language for interactive fiction
+ // a programming language for interactive fiction
+extern def print(text : string) -> void
+
+
+new Door called OldBrokenDoor {
+    name = "broken old door"
+    description = "A broken old door"  
+    
+    def hitWith(with : Thing) -> bool {
+        if !super.hitWith(with) {
+            return false
+        }
+
+        print "You hit the door with " + with.name + "."
+        print "The door breaks into thousand moldy"
+
+        return true
+    }
+}
+
+new type Thing called Container {
+    var horror : string    
+}
+
+enum Type {
+    TestItem1,
+    TestItem2
+}
 
 var test : Test
 
@@ -13,27 +40,38 @@ var test2 : { test22 : Test, perse : number[], haha : { kaasu: string} } = {
 }
 //var test3 : { test : Test, perse : number[] } = { test : test, perse : [] }
 
+var test5 : Type = .Test
 
 // Incorrect one
 // var test3 : { test : Test, perse : number[] } = { test : test, perse : 100 }
 
 var currentRoom : Room
 
+new Room called Verb {
+    var synonyms : string[]
+}
+
+new type Jorma {
+    var test : Test
+    var perse : int
+}
+
 // a new type called Thing as the base type for all objects
-new type object called Thing {
+new type Thing {
     var name : string
     var description : string
+    var is_fixed_in_place : bool = false
 
-    @verb "look" "[this]"
-    def look() {
+    @verb "look", "[this]"
+    def look() -> bool {
         print(description)
 
         return true
     }
-
-    @verb "place" "[something]" "in" "[this]"
-    def place(something : object) {
-        if this is Container {
+    
+    @verb "place", "[something]", "in", "[this]"
+    def place() -> bool {
+        if this is object {
             print("You can't place " + something.name + " in " + name + ".")
             return false
         }
@@ -41,10 +79,16 @@ new type object called Thing {
         print("You place " + something.name + " in " + name + ".")
         return true
     }
+   
+    @verb "hit", "[this]", "with", "[with]"
+    def hitWith(with : Thing) -> bool {
+        print("You hit " + name + " with " + with.name + ".")
+        return true
+    }
 
-    @verb "take" "[this]"
-    def take() {
-        if fixed_in_place is  {
+    @verb "take", "[this]"
+    def take() -> bool {
+        if is_fixed_in_place {
             print("You can't take " + name + " it is fixed in place.")
             return false
         }
@@ -54,29 +98,31 @@ new type object called Thing {
     }
 }
 
-new type Thing called Container {
+enum LightState {
+    On,
+    Off
 }
 
 new type Thing called Room {
-    attr light = is on | is off
+    var light : LightState = .On
 }
 
 new Room called DarkForest {
-    name "dark forest"
-    description "A dark forest"
-    light is off
+    name = "dark forest"
+    description = "A dark forest"
+    light = .Off
 }
 
 // because we don't say new typ, it will be a new type AND a new instance of that type both called Door
 new Thing called Door {
-    @verb "open" "[this]"
+    @verb "open", "[this]"
     def open() {
         print("You open the door.")
     }
 
-    @verb "hit" "[this]" "with" "[with]"
-    def hitWith(with : object) {
-        if currentRoom.light is off {
+    @verb "hit", "[this]", "with", "[with]"
+    def hitWith(with : object) -> bool {
+        if currentRoom.light == .Off {
             print("You can't see the door.")
             return false
         }
@@ -86,27 +132,10 @@ new Thing called Door {
     }
 }
 
-new Door called OldBrokenDoor {
-    name "broken old door"
-    description "A broken old door"  
-    door is
-
-    over def hitWith(with : object) {
-        if !super.hitWith(with) {
-            return false
-        }
-
-        print "You hit the door with " + with.name + "."
-        print "The door breaks into thousand moldy"
-
-        return true
-    }
-}
 
 new object called Test {
     var test : Test
-    var perse : number    
-    attr is container
+    var perse : number
 
     def init() {
 

@@ -1,5 +1,5 @@
+using Compiler.Semantics.TypeInformation;
 using Compiler.Syntax.Nodes;
-using Compiler.TypeInformation;
 
 namespace Compiler;
 

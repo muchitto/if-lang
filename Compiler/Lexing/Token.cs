@@ -1,3 +1,4 @@
+using Compiler.ErrorHandling;
 using Compiler.Syntax;
 
 namespace Compiler.Lexing;
@@ -90,8 +91,17 @@ public readonly record struct Token
             "<<=" => Operator.BitwiseLeftShift,
             ">>=" => Operator.BitwiseRightShift,
 
+            // Other
+
+            "is" => Operator.Is,
+
             _ => throw new Exception($"Unknown operator: {Value}")
         };
+    }
+
+    public bool IsOperator()
+    {
+        return Is(TokenType.Operator) || Is(TokenType.Keyword, "is");
     }
 
     public bool IsAssignmentOperator()

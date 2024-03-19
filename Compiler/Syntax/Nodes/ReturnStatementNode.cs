@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class ReturnStatementNode(BaseNode? value) : BaseNode
+public class ReturnStatementNode(NodeContext nodeContext, BaseNode? value) : BaseNode(nodeContext)
 {
     public BaseNode? Value { get; } = value;
 

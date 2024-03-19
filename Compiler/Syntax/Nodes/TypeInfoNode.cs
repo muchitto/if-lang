@@ -1,5 +1,5 @@
 namespace Compiler.Syntax.Nodes;
 
-public abstract class TypeInfoNode : BaseNode
+public abstract class TypeInfoNode(NodeContext nodeContext) : BaseNode(nodeContext)
 {
 }

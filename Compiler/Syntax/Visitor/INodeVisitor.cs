@@ -6,30 +6,24 @@ public interface INodeVisitor
 {
     public ProgramNode VisitProgramNode(ProgramNode programNode);
     public TypeInfoNameNode VisitTypeNameNode(TypeInfoNameNode typeInfoNameNode);
-    public WithExpressionNode VisitWithExpressionNode(WithExpressionNode withExpressionNode);
     public BodyBlockNode VisitBodyBlockNode(BodyBlockNode bodyBlockNode);
     public NumberLiteralNode VisitNumberNode(NumberLiteralNode numberLiteralNode);
     public FunctionCallArgumentNode VisitFunctionCallArgumentNode(FunctionCallArgumentNode functionCallArgumentNode);
-    public FunctionExpressionNode VisitFunctionExpressionNode(FunctionExpressionNode functionExpressionNode);
     public VariableDeclarationNode VisitVariableDeclarationNode(VariableDeclarationNode variableDeclarationNode);
     public IdentifierNode VisitIdentifierNode(IdentifierNode identifierNode);
 
     public FunctionDeclarationNode VisitFunctionDeclarationNode(FunctionDeclarationNode functionDeclarationNode);
 
-    public PropertySetExpressionNode
-        VisitPropertySetExpressionNode(PropertySetExpressionNode propertySetExpressionNode);
 
     public FunctionCallNode VisitFunctionCallNode(FunctionCallNode functionCallNode);
-    public ImportStatementNode VisitImportStatementNode(ImportStatementNode importStatementNode);
     public ExpressionNode VisitExpressionNode(ExpressionNode expressionNode);
     public ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode);
 
-    public FunctionDeclarationArgumentNode VisitFunctionDeclarationParameterNode(
-        FunctionDeclarationArgumentNode functionDeclarationArgumentNode);
+    public FunctionDeclarationParameterNode VisitFunctionDeclarationParameterNode(
+        FunctionDeclarationParameterNode functionDeclarationParameterNode);
 
     public BooleanLiteralNode VisitBooleanLiteralNode(BooleanLiteralNode booleanLiteralNode);
     public IfStatementNode VisitIfStatementNode(IfStatementNode ifStatementNode);
-    public FlagExpressionNode VisitFlagExpressionNode(FlagExpressionNode flagExpressionNode);
     public StringLiteralNode VisitStringLiteralNode(StringLiteralNode stringLiteralNode);
     public AnnotationNode VisitAnnotationNode(AnnotationNode annotationNode);
 
@@ -67,4 +61,21 @@ public interface INodeVisitor
 
     public StructureLiteralFieldNode
         VisitStructureLiteralFieldNode(StructureLiteralFieldNode structureLiteralFieldNode);
+
+    public EnumShortHandNode VisitEnumShortHandNode(EnumShortHandNode enumShortHandNode);
+
+    public ObjectVariableOverride VisitObjectVariableOverride(ObjectVariableOverride objectVariableOverride);
+
+    public UnaryExpressionNode VisitUnaryExpressionNode(UnaryExpressionNode unaryExpressionNode);
+
+    public ExternNode VisitExternNode(ExternNode externNode);
+
+    public ExternFunctionNode VisitExternFunctionNode(ExternFunctionNode externFunctionNode);
+
+    public ExternVariableNode VisitExternVariableNode(ExternVariableNode externVariableNode);
+
+    public EnumDeclarationItemParameterNode VisitEnumDeclarationItemParameterNode(
+        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode);
+
+    public EnumDeclarationItemNode VisitEnumDeclarationItemNode(EnumDeclarationItemNode enumDeclarationItemNode);
 }

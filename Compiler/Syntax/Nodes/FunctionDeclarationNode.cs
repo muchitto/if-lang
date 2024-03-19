@@ -3,12 +3,15 @@ using Compiler.Syntax.Visitor;
 namespace Compiler.Syntax.Nodes;
 
 public class FunctionDeclarationNode(
+    NodeContext nodeContext,
     IdentifierNode name,
-    List<FunctionDeclarationArgumentNode> parameterNodes,
+    List<FunctionDeclarationParameterNode> parameterNodes,
     TypeInfoNode? returnTypeInfo,
-    BodyBlockNode body) : DeclarationNode(name)
+    BodyBlockNode body,
+    List<AnnotationNode> annotationNodes
+) : DeclarationNode(nodeContext, name, annotationNodes)
 {
-    public List<FunctionDeclarationArgumentNode> ParameterNodes { get; } = parameterNodes;
+    public List<FunctionDeclarationParameterNode> ParameterNodes { get; } = parameterNodes;
     public TypeInfoNode? ReturnTypeInfo { get; } = returnTypeInfo;
     public BodyBlockNode Body { get; } = body;
 

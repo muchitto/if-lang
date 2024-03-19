@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class ArrayLiteralNode(List<BaseNode> elements) : LiteralNode
+public class ArrayLiteralNode(NodeContext nodeContext, List<BaseNode> elements) : LiteralNode(nodeContext)
 {
     public List<BaseNode> Elements { get; } = elements;
 

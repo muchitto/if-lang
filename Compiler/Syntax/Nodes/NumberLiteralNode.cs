@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class NumberLiteralNode(string number) : LiteralNode
+public class NumberLiteralNode(NodeContext nodeContext, string number) : LiteralNode(nodeContext)
 {
     public string Number { get; } = number;
 

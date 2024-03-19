@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class TypeInfoNameNode(string name) : TypeInfoNode
+public class TypeInfoNameNode(NodeContext nodeContext, string name) : TypeInfoNode(nodeContext)
 {
     public string Name { get; } = name;
 

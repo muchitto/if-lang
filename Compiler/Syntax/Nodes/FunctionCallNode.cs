@@ -2,7 +2,8 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class FunctionCallNode(IdentifierNode name, List<FunctionCallArgumentNode> arguments) : BaseNode
+public class FunctionCallNode(NodeContext nodeContext, IdentifierNode name, List<FunctionCallArgumentNode> arguments)
+    : BaseNode(nodeContext)
 {
     public List<FunctionCallArgumentNode> Arguments = arguments;
     public IdentifierNode Name = name;

@@ -2,7 +2,8 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class TypeInfoStructureNode(Dictionary<string, TypeInfoNode> fields) : TypeInfoNode
+public class TypeInfoStructureNode(NodeContext nodeContext, Dictionary<string, TypeInfoNode> fields)
+    : TypeInfoNode(nodeContext)
 {
     public Dictionary<string, TypeInfoNode> Fields { get; } = fields;
 

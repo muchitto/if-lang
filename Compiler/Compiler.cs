@@ -1,7 +1,7 @@
-﻿using Compiler.Lexing;
+﻿using Compiler.ErrorHandling;
 using Compiler.Parsing;
-using Compiler.ScopeHandler;
-using Compiler.SemanticPasses;
+using Compiler.Semantics;
+using Compiler.Semantics.SemanticPasses;
 using Compiler.Syntax.Visitor;
 
 namespace Compiler;
@@ -15,7 +15,7 @@ public static class Compiler
         var position = new PositionData(filename, sourceCode, 0, 0);
         var compilationContext = new CompilationContext(position);
         var parser = new Parser(compilationContext);
-        var program = parser.Parse();
+
         var semanticContext = new SemanticContext();
 
         var semanticHandler = new SemanticHandler(semanticContext);
@@ -28,9 +28,18 @@ public static class Compiler
             new UnknownCheckerVisitor()
         };
 
-        foreach (var pass in passes)
+        try
         {
-            pass.VisitProgramNode(program);
+            var program = parser.Parse();
+
+            foreach (var pass in passes)
+            {
+                pass.VisitProgramNode(program);
+            }
+        }
+        catch (CompileError.PositionalError e)
+        {
+            Console.WriteLine(e.FormatError());
         }
     }
 }

@@ -3,7 +3,7 @@ using Compiler.Parsing;
 
 namespace Compiler.Lexing;
 
-public class Lexer(CompilationContext context, LexerOptions lexerOptions)
+public class Lexer(CompilationContext context)
 {
     public static readonly string[] AssignmentOperators =
     [
@@ -12,27 +12,24 @@ public class Lexer(CompilationContext context, LexerOptions lexerOptions)
 
     public static readonly string[] Keywords =
     [
-        "new", "def", "var", "is", "if", "else", "while", "for", "in", "break", "continue", "return", "type",
-        "attr", "import", "from", "static", "extend", "on", "off", "true", "false", "null"
+        "new", "def", "var", "enum", "in", "is", "if", "else", "while", "for", "in", "break", "continue", "return",
+        "import", "from", "static", "true", "false", "null", "extend", "type", "extern"
     ];
 
     public static readonly string[] Operators =
     [
-        "+", "-", "*", "/", "%", ">", "<", ">=", "<=", "==", "!=", "&&", "||", "!", "++", "--"
+        "+", "-", "*", "/", "%", ">", "<", ">=", "<=", "==", "!=", "&&", "||", "!", "++", "--", "is"
     ];
 
-    public static readonly string[] Symbols = ["{", "}", "(", ")", "[", "]", "@", "->", ".", ":", ","];
+    public static readonly string[] Symbols = ["{", "}", "(", ")", "[", "]", "@", "->", ".", ":", ",", "|"];
 
     private bool _lastTokenWasNewLine = true;
 
-    private Token? _peekedToken;
     private CompilationContext Context { get; } = context;
 
     private PositionData PositionData => Context.PositionData;
 
     private string[] SymbolsAndOperators => [..Symbols, ..Operators, ..AssignmentOperators];
-
-    public LexerOptions LexerOptions { get; } = lexerOptions;
 
     private char GetChar()
     {
@@ -125,29 +122,8 @@ public class Lexer(CompilationContext context, LexerOptions lexerOptions)
         return true;
     }
 
-    public Token PeekToken()
-    {
-        if (_peekedToken != null)
-        {
-            return _peekedToken.Value;
-        }
-
-        var token = GetToken();
-
-        _peekedToken = token;
-
-        return token;
-    }
-
     public Token GetToken()
     {
-        if (_peekedToken != null)
-        {
-            var token = _peekedToken.Value;
-            _peekedToken = null;
-            return token;
-        }
-
         while (true)
         {
             if (IsEnd())
@@ -157,16 +133,16 @@ public class Lexer(CompilationContext context, LexerOptions lexerOptions)
 
             if (char.IsWhiteSpace(PeekChar()))
             {
-                if (LexerOptions.ShouldRecordNewLines && !_lastTokenWasNewLine && PeekChar() == '\n')
+                if (PeekChar() == '\n')
                 {
                     GetWhile(char.IsWhiteSpace);
 
                     if (IsEnd())
                     {
-                        return new Token(TokenType.EndOfFile, "", PositionData);
+                        return new Token(TokenType.EndOfFile, "", PositionData.PositionDataSpan(1));
                     }
 
-                    return new Token(TokenType.NewLine, "", PositionData);
+                    return new Token(TokenType.NewLine, "", PositionData.PositionDataSpan(1));
                 }
 
                 GetChar();
@@ -206,7 +182,7 @@ public class Lexer(CompilationContext context, LexerOptions lexerOptions)
 
         if (IsEnd())
         {
-            return new Token(TokenType.EndOfFile, PositionData);
+            return new Token(TokenType.EndOfFile, PositionData.PositionDataSpan(1));
         }
 
         _lastTokenWasNewLine = false;
@@ -247,7 +223,7 @@ public class Lexer(CompilationContext context, LexerOptions lexerOptions)
             var quote = GetChar();
             var str = GetUntil(quote);
             GetChar();
-            return new Token(TokenType.String, str, startingPosition.PositionDataSpan(str.Length + 1));
+            return new Token(TokenType.String, str, startingPosition.PositionDataSpan(str.Length + 2));
         }
 
         var longestMatch = "";

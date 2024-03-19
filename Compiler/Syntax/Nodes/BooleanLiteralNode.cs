@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class BooleanLiteralNode(bool value) : LiteralNode
+public class BooleanLiteralNode(NodeContext nodeContext, bool value) : LiteralNode(nodeContext)
 {
     public bool Value { get; } = value;
 
