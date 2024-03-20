@@ -429,4 +429,17 @@ public class UnknownCheckerVisitor : BaseNodeVisitor
 
         return base.VisitExternNode(externNode);
     }
+
+    public override ArrayAccessNode VisitArrayAccessNode(ArrayAccessNode arrayAccessNode)
+    {
+        if (arrayAccessNode.TypeRef.TypeInfo.IsIncomplete)
+        {
+            throw new CompileError.SemanticError(
+                "array access type is incomplete",
+                arrayAccessNode.NodeContext.PositionData
+            );
+        }
+
+        return base.VisitArrayAccessNode(arrayAccessNode);
+    }
 }

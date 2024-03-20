@@ -4,7 +4,7 @@ namespace Compiler.Syntax.Nodes;
 
 public class ExternFunctionNode(
     NodeContext nodeContext,
-    IdentifierNode name,
+    DeclarationNameNode name,
     List<FunctionDeclarationParameterNode> parameterNodes,
     TypeInfoNode? returnType) : ExternNode(nodeContext, name)
 {

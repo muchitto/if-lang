@@ -17,4 +17,10 @@ public interface ITypeInfoVisitor
     public TypeInfo VisitTypeInfo(TypeInfo typeInfo);
 
     public FunctionTypeInfo VisitFunctionTypeInfo(FunctionTypeInfo functionTypeInfo);
+
+    public EnumTypeInfo VisitEnumTypeInfo(EnumTypeInfo enumTypeInfo);
+
+    public InlineEnumTypeInfo VisitInlineEnumTypeInfo(InlineEnumTypeInfo inlineEnumTypeInfo);
+
+    public EnumItemTypeInfo VisitEnumItemTypeInfo(EnumItemTypeInfo enumItemTypeInfo);
 }

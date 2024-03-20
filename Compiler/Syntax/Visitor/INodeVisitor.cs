@@ -78,4 +78,15 @@ public interface INodeVisitor
         EnumDeclarationItemParameterNode enumDeclarationItemParameterNode);
 
     public EnumDeclarationItemNode VisitEnumDeclarationItemNode(EnumDeclarationItemNode enumDeclarationItemNode);
+
+    public TypeInfoEnumNode VisitTypeInfoEnumNode(TypeInfoEnumNode typeInfoEnumNode);
+
+    public TypeInfoEnumFieldParamNode VisitTypeInfoEnumFieldParamNode(
+        TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode);
+
+    public TypeInfoEnumFieldNode VisitTypeInfoEnumFieldNode(TypeInfoEnumFieldNode typeInfoEnumFieldNode);
+
+    public DeclarationNameNode VisitDeclarationNameNode(DeclarationNameNode declarationNameNode);
+
+    public ArrayAccessNode VisitArrayAccessNode(ArrayAccessNode arrayAccessNode);
 }

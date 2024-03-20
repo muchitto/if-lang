@@ -1,3 +1,1 @@
-﻿var file = "example.txt";
-
-Compiler.Compiler.Compile(file);
+﻿Compiler.Compiler.Compile(args[0]);

@@ -42,6 +42,8 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
 
         var name = objectDeclarationNode.Name.Name;
 
+        objectDeclarationNode.Name.TypeRef = new TypeRef(TypeInfo.Unknown);
+
         var fields = new Dictionary<string, TypeRef>();
         objectDeclarationNode.TypeRef.TypeInfo =
             new ObjectTypeInfo(baseTypeRef, name, fields, objectScope);
@@ -54,8 +56,6 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
         }
 
         SemanticHandler.PopScope();
-
-        objectDeclarationNode.Name.TypeRef = objectDeclarationNode.TypeRef;
 
         SemanticHandler.SetSymbol(
             new Symbol(
@@ -106,11 +106,11 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
     {
         var name = variableDeclarationNode.Name.Name;
 
-        if (variableDeclarationNode.TypeName != null)
+        if (variableDeclarationNode.TypeInfo != null)
         {
-            VisitTypeInfoNode(variableDeclarationNode.TypeName);
+            VisitTypeInfoNode(variableDeclarationNode.TypeInfo);
 
-            variableDeclarationNode.TypeRef = variableDeclarationNode.TypeName.TypeRef;
+            variableDeclarationNode.TypeRef = variableDeclarationNode.TypeInfo.TypeRef;
         }
 
         if (variableDeclarationNode.Value != null)
@@ -162,7 +162,6 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
         var functionTypeInfo = new FunctionTypeInfo(returnTypeRef, parameters);
 
         functionDeclarationNode.TypeRef.TypeInfo = functionTypeInfo;
-        functionDeclarationNode.Name.TypeRef = functionDeclarationNode.TypeRef;
 
         SemanticHandler.SetSymbol(
             new Symbol(name, SemanticHandler.CurrentScope, functionDeclarationNode, SymbolType.Identifier),

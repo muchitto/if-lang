@@ -38,7 +38,9 @@ public abstract class BaseNodeVisitor : INodeVisitor
             LiteralNode literalNode => VisitLiteralNode(literalNode),
             EnumShortHandNode enumShortHandNode => VisitEnumShortHandNode(enumShortHandNode),
             UnaryExpressionNode unaryExpressionNode => VisitUnaryExpressionNode(unaryExpressionNode),
-            _ => throw new VisitorError("unhandled base node")
+            ArrayAccessNode arrayAccessNode => VisitArrayAccessNode(arrayAccessNode),
+
+            _ => throw new NotImplementedException()
         };
     }
 
@@ -60,6 +62,11 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         enumShortHandNode.Name.Accept(this);
 
+        foreach (var parameter in enumShortHandNode.Parameters)
+        {
+            parameter.Accept(this);
+        }
+
         return enumShortHandNode;
     }
 
@@ -74,23 +81,24 @@ public abstract class BaseNodeVisitor : INodeVisitor
             StructureLiteralFieldNode structureLiteralFieldNode => VisitStructureLiteralFieldNode(
                 structureLiteralFieldNode),
             ArrayLiteralNode arrayLiteralNode => VisitArrayLiteralNode(arrayLiteralNode),
+            NullLiteralNode nullLiteralNode => nullLiteralNode,
             _ => throw new VisitorError("unhandled literal node")
         };
     }
 
     public virtual TypeInfoNode VisitTypeInfoNode(TypeInfoNode typeInfoNode)
     {
-        switch (typeInfoNode)
+        return typeInfoNode switch
         {
-            case TypeInfoNameNode typeInfoNameNode:
-                return VisitTypeNameNode(typeInfoNameNode);
-            case TypeInfoArrayNode typeInfoArrayNode:
-                return VisitTypeInfoArrayNode(typeInfoArrayNode);
-            case TypeInfoStructureNode typeInfoStructureNode:
-                return VisitTypeInfoStructureNode(typeInfoStructureNode);
-        }
-
-        throw new VisitorError("unhandled type info node");
+            TypeInfoNameNode typeInfoNameNode => VisitTypeNameNode(typeInfoNameNode),
+            TypeInfoArrayNode typeInfoArrayNode => VisitTypeInfoArrayNode(typeInfoArrayNode),
+            TypeInfoStructureNode typeInfoStructureNode => VisitTypeInfoStructureNode(typeInfoStructureNode),
+            TypeInfoEnumNode typeInfoEnumNode => VisitTypeInfoEnumNode(typeInfoEnumNode),
+            TypeInfoEnumFieldNode typeInfoEnumFieldNode => VisitTypeInfoEnumFieldNode(typeInfoEnumFieldNode),
+            TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode => VisitTypeInfoEnumFieldParamNode(
+                typeInfoEnumFieldParamNode),
+            _ => throw new VisitorError("unhandled type info node")
+        };
     }
 
     public virtual TypeInfoNameNode VisitTypeNameNode(TypeInfoNameNode typeInfoNameNode)
@@ -174,7 +182,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         variableDeclarationNode.Name.Accept(this);
         variableDeclarationNode.Value?.Accept(this);
-        variableDeclarationNode.TypeName?.Accept(this);
+        variableDeclarationNode.TypeInfo?.Accept(this);
 
         foreach (var annotation in variableDeclarationNode.Annotations)
         {
@@ -422,5 +430,49 @@ public abstract class BaseNodeVisitor : INodeVisitor
         enumDeclarationItemParameterNode.TypeInfoNode.Accept(this);
 
         return enumDeclarationItemParameterNode;
+    }
+
+    public virtual TypeInfoEnumNode VisitTypeInfoEnumNode(TypeInfoEnumNode typeInfoEnumNode)
+    {
+        foreach (var field in typeInfoEnumNode.Fields)
+        {
+            field.Accept(this);
+        }
+
+        return typeInfoEnumNode;
+    }
+
+    public virtual TypeInfoEnumFieldParamNode VisitTypeInfoEnumFieldParamNode(
+        TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode)
+    {
+        typeInfoEnumFieldParamNode.Name.Accept(this);
+        typeInfoEnumFieldParamNode.TypeInfoNode.Accept(this);
+
+        return typeInfoEnumFieldParamNode;
+    }
+
+    public virtual TypeInfoEnumFieldNode VisitTypeInfoEnumFieldNode(TypeInfoEnumFieldNode typeInfoEnumFieldNode)
+    {
+        typeInfoEnumFieldNode.Name.Accept(this);
+
+        foreach (var parameter in typeInfoEnumFieldNode.Parameters)
+        {
+            parameter.Accept(this);
+        }
+
+        return typeInfoEnumFieldNode;
+    }
+
+    public virtual DeclarationNameNode VisitDeclarationNameNode(DeclarationNameNode declarationNameNode)
+    {
+        return declarationNameNode;
+    }
+
+    public virtual ArrayAccessNode VisitArrayAccessNode(ArrayAccessNode arrayAccessNode)
+    {
+        arrayAccessNode.Array.Accept(this);
+        arrayAccessNode.Accessor.Accept(this);
+
+        return arrayAccessNode;
     }
 }

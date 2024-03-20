@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class ExternVariableNode(NodeContext nodeContext, IdentifierNode name, TypeInfoNode typeInfoNode)
+public class ExternVariableNode(NodeContext nodeContext, DeclarationNameNode name, TypeInfoNode typeInfoNode)
     : ExternNode(nodeContext, name)
 {
     public TypeInfoNode TypeInfoNode { get; } = typeInfoNode;

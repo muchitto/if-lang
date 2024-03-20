@@ -7,11 +7,6 @@ public class BooleanTypeInfo : TypeInfo
         return "boolean";
     }
 
-    public override bool HasDeferredTypes()
-    {
-        return false;
-    }
-
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitBooleanTypeInfo(this);

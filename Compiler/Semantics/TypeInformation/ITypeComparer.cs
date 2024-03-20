@@ -31,4 +31,6 @@ public interface ITypeComparer<TError>
     bool CompareEnumTypeInfo(EnumTypeInfo typeInfo, TypeInfo other);
 
     bool CompareEnumItemTypeInfo(EnumItemTypeInfo typeInfo, TypeInfo other);
+
+    bool CompareInlineEnumTypeInfo(InlineEnumTypeInfo typeInfo, TypeInfo other);
 }

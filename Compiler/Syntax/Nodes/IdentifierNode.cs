@@ -15,4 +15,9 @@ public class IdentifierNode(NodeContext nodeContext, string name) : BaseNode(nod
     {
         return new TypeInfoNameNode(NodeContext, Name);
     }
+
+    public DeclarationNameNode ToDeclarationNameNode()
+    {
+        return new DeclarationNameNode(NodeContext, Name);
+    }
 }

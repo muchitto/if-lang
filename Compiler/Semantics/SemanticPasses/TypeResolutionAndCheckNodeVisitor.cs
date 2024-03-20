@@ -8,9 +8,13 @@ using Compiler.Syntax.Nodes;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, SemanticHandler semanticHandler)
-    : SemanticPassBaseNodeVisitor(semanticContext, semanticHandler)
+public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 {
+    public TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, SemanticHandler semanticHandler) : base(
+        semanticContext, semanticHandler)
+    {
+    }
+
     public override ProgramNode VisitProgramNode(ProgramNode programNode)
     {
         SemanticHandler.RecallNodeScope(programNode);
@@ -238,8 +242,8 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
 
     public override ObjectVariableOverride VisitObjectVariableOverride(ObjectVariableOverride objectVariableOverride)
     {
-        if (!semanticHandler.TryGetScopeOfType(ScopeType.Object, out var objectScope) ||
-            objectScope.AttachedNode is not ObjectDeclarationNode objectDeclarationNode)
+        if (!SemanticHandler.TryGetScopeOfType(ScopeType.Object, out var objectScope) ||
+            objectScope.AttachedNode is not ObjectDeclarationNode)
         {
             throw new CompileError.SemanticError(
                 "object variable override not in object scope",
@@ -247,30 +251,7 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
             );
         }
 
-        objectVariableOverride.Value.Accept(this);
-
-        if (SemanticHandler.TryLookupIdentifier(objectVariableOverride.Name.Name, out var variableSymbol))
-        {
-            if (variableSymbol.TypeRef.Compare(TypeInfo.Unknown))
-            {
-                throw new CompileError.SemanticError(
-                    $"object variable override {objectVariableOverride.Name.Name} type not resolved",
-                    objectVariableOverride.NodeContext.PositionData
-                );
-            }
-
-            if (!variableSymbol.TypeRef.Compare(objectVariableOverride.Value.TypeRef))
-            {
-                throw new CompileError.SemanticError(
-                    $"object variable override {objectVariableOverride.Name.Name} type mismatch",
-                    objectVariableOverride.NodeContext.PositionData
-                );
-            }
-
-            objectVariableOverride.TypeRef = variableSymbol.TypeRef;
-            objectVariableOverride.Name.TypeRef = variableSymbol.TypeRef;
-        }
-        else
+        if (!SemanticHandler.TryLookupIdentifier(objectVariableOverride.Name.Name, out var variableSymbol))
         {
             throw new CompileError.SemanticError(
                 $"object variable override {objectVariableOverride.Name.Name} not found",
@@ -278,7 +259,64 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
             );
         }
 
+        if (variableSymbol.TypeRef.TypeInfo == TypeInfo.Unknown)
+        {
+            throw new CompileError.SemanticError(
+                $"object variable override {objectVariableOverride.Name.Name} type not resolved",
+                objectVariableOverride.NodeContext.PositionData
+            );
+        }
+
+        objectVariableOverride.TypeRef = variableSymbol.TypeRef;
+
+        objectVariableOverride.Value.Accept(this);
+
+        if (objectVariableOverride.Value.TypeRef.HasDeferredTypes())
+        {
+            var inferenceVisitor = new InferenceVisitor();
+            inferenceVisitor.VisitObjectVariableOverride(objectVariableOverride);
+        }
+
+        if (!variableSymbol.TypeRef.Compare(objectVariableOverride.Value.TypeRef))
+        {
+            throw new CompileError.SemanticError(
+                $"object variable override {objectVariableOverride.Name.Name} type mismatch",
+                objectVariableOverride.NodeContext.PositionData
+            );
+        }
+
+        objectVariableOverride.TypeRef = variableSymbol.TypeRef;
+
         return objectVariableOverride;
+    }
+
+    public override ArrayAccessNode VisitArrayAccessNode(ArrayAccessNode arrayAccessNode)
+    {
+        arrayAccessNode.Array.Accept(this);
+        arrayAccessNode.Accessor.Accept(this);
+
+        // TODO: Maybe in the future we can support array access with non-array types.
+        // After we allow making accessors and generic types, we can allow this.
+
+        if (arrayAccessNode.Array.TypeRef.TypeInfo is not GenericTypeInfo { Name: "Array" })
+        {
+            throw new CompileError.SemanticError(
+                "trying to access non-array",
+                arrayAccessNode.NodeContext.PositionData
+            );
+        }
+
+        if (arrayAccessNode.Accessor.TypeRef.TypeInfo != TypeInfo.Int)
+        {
+            throw new CompileError.SemanticError(
+                "array accessor must be int",
+                arrayAccessNode.NodeContext.PositionData
+            );
+        }
+
+        arrayAccessNode.TypeRef = arrayAccessNode.Array.TypeRef;
+
+        return arrayAccessNode;
     }
 
     public override IdentifierNode VisitIdentifierNode(IdentifierNode identifierNode)
@@ -392,9 +430,14 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
 
     public override EnumShortHandNode VisitEnumShortHandNode(EnumShortHandNode enumShortHandNode)
     {
-        throw new NotImplementedException();
+        enumShortHandNode.TypeRef.TypeInfo = TypeInfo.Deferred;
 
-        return base.VisitEnumShortHandNode(enumShortHandNode);
+        foreach (var parameter in enumShortHandNode.Parameters)
+        {
+            VisitBaseNode(parameter);
+        }
+
+        return enumShortHandNode;
     }
 
     public override ExternFunctionNode VisitExternFunctionNode(ExternFunctionNode externFunctionNode)
@@ -417,6 +460,13 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
             }
         }
 
+        VisitBaseNode(ifStatementNode.Body);
+
+        if (ifStatementNode.NextIf != null)
+        {
+            VisitIfStatementNode(ifStatementNode.NextIf);
+        }
+
         return ifStatementNode;
     }
 
@@ -434,6 +484,29 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
         var visitedLeft = VisitBaseNode(expressionNode.Left);
         var visitedRight = VisitBaseNode(expressionNode.Right);
 
+        if (visitedLeft.TypeRef.HasDeferredTypes() || visitedRight.TypeRef.HasDeferredTypes())
+        {
+            var inferenceVisitor = new InferenceVisitor();
+            inferenceVisitor.VisitExpressionNode(expressionNode);
+
+            if (visitedLeft.TypeRef.HasDeferredTypes() || visitedRight.TypeRef.HasDeferredTypes())
+            {
+                throw new CompileError.SemanticError(
+                    "expression type not resolved",
+                    expressionNode.NodeContext.PositionData
+                );
+            }
+        }
+
+        if (visitedLeft.TypeRef.Compare<ExpressionComparer>(TypeInfo.Void) ||
+            visitedRight.TypeRef.Compare<ExpressionComparer>(TypeInfo.Void))
+        {
+            throw new CompileError.SemanticError(
+                "cannot use void in expression",
+                expressionNode.NodeContext.PositionData
+            );
+        }
+
         if (expressionNode.Operator == Operator.Is)
         {
             // TODO: Need to implement a IS comparer so
@@ -449,18 +522,35 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
                 );
             }
 
-            expressionNode.TypeRef = new TypeRef(TypeInfo.Boolean);
+            expressionNode.TypeRef.TypeInfo = TypeInfo.Boolean;
 
             return expressionNode;
         }
 
-        if (visitedLeft.TypeRef.Compare<ExpressionComparer>(TypeInfo.Void) ||
-            visitedRight.TypeRef.Compare<ExpressionComparer>(TypeInfo.Void))
+        if (expressionNode.Operator.IsLogicalOperator())
         {
-            throw new CompileError.SemanticError(
-                "cannot use void in expression",
-                expressionNode.NodeContext.PositionData
-            );
+            bool compare;
+
+            if (expressionNode.Operator == Operator.Is)
+            {
+                compare = visitedLeft.TypeRef.Compare<IsComparer>(visitedRight.TypeRef);
+            }
+            else
+            {
+                compare = visitedLeft.TypeRef.Compare<ExpressionComparer>(visitedRight.TypeRef);
+            }
+
+            if (!compare)
+            {
+                throw new CompileError.SemanticError(
+                    "expression type mismatch",
+                    expressionNode.NodeContext.PositionData
+                );
+            }
+
+            expressionNode.TypeRef.TypeInfo = TypeInfo.Boolean;
+
+            return expressionNode;
         }
 
         if (!visitedLeft.TypeRef.Compare<ExpressionComparer>(visitedRight.TypeRef))
@@ -531,9 +621,9 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
     {
         TypeRef? typeRef = null;
 
-        if (variableDeclarationNode.TypeName != null)
+        if (variableDeclarationNode.TypeInfo != null)
         {
-            var visitedTypeName = VisitTypeInfoNode(variableDeclarationNode.TypeName);
+            var visitedTypeName = VisitTypeInfoNode(variableDeclarationNode.TypeInfo);
 
             typeRef = visitedTypeName.TypeRef;
 
@@ -553,7 +643,7 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
                 );
             }
 
-            if (visitedValue.TypeRef.TypeInfo.HasDeferredTypes())
+            if (visitedValue.TypeRef.HasDeferredTypes())
             {
                 if (typeRef == null)
                 {
@@ -625,6 +715,11 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
         {
             assignmentNode.Value.TypeRef = assignmentNode.Name.TypeRef;
         }
+        else if (assignmentNode.Value is EnumShortHandNode)
+        {
+            var inferenceVisitor = new InferenceVisitor();
+            inferenceVisitor.VisitAssignmentNode(assignmentNode);
+        }
 
         if (!assignmentNode.Name.TypeRef.Compare(assignmentNode.Value.TypeRef))
         {
@@ -688,7 +783,7 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
     {
         base.VisitReturnStatementNode(returnStatementNode);
 
-        if (!semanticHandler.TryGetScopeOfType(ScopeType.Function, out var functionScope)
+        if (!SemanticHandler.TryGetScopeOfType(ScopeType.Function, out var functionScope)
             || functionScope.AttachedNode is not FunctionDeclarationNode functionDeclarationNode
             || functionScope.AttachedNode.TypeRef.TypeInfo is not FunctionTypeInfo functionTypeInfo)
         {
@@ -725,6 +820,8 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
                 returnStatementNode.NodeContext.PositionData
             );
         }
+
+        returnStatementNode.TypeRef = functionTypeInfo.ReturnType;
 
         return returnStatementNode;
     }
@@ -868,5 +965,61 @@ public class TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, 
         SemanticHandler.PopScope();
 
         return bodyBlockNode;
+    }
+
+    public override TypeInfoEnumNode VisitTypeInfoEnumNode(TypeInfoEnumNode typeInfoEnumNode)
+    {
+        var fields = new Dictionary<string, TypeRef>();
+        foreach (var field in typeInfoEnumNode.Fields)
+        {
+            VisitTypeInfoEnumFieldNode(field);
+
+            if (field.TypeRef.Compare(TypeInfo.Unknown))
+            {
+                throw new CompileError.SemanticError(
+                    $"enum field {field.Name.Name} type not resolved",
+                    field.NodeContext.PositionData
+                );
+            }
+
+            fields.Add(field.Name.Name, field.TypeRef);
+        }
+
+        typeInfoEnumNode.TypeRef.TypeInfo = new InlineEnumTypeInfo(fields);
+
+        return typeInfoEnumNode;
+    }
+
+    public override TypeInfoEnumFieldNode VisitTypeInfoEnumFieldNode(TypeInfoEnumFieldNode typeInfoEnumFieldNode)
+    {
+        var parameters = new Dictionary<string, TypeRef>();
+        foreach (var parameter in typeInfoEnumFieldNode.Parameters)
+        {
+            VisitTypeInfoEnumFieldParamNode(parameter);
+
+            if (parameter.TypeRef.Compare(TypeInfo.Unknown))
+            {
+                throw new CompileError.SemanticError(
+                    $"enum field parameter {parameter.Name.Name} type not resolved",
+                    parameter.NodeContext.PositionData
+                );
+            }
+
+            parameters.Add(parameter.Name.Name, parameter.TypeRef);
+        }
+
+        typeInfoEnumFieldNode.TypeRef.TypeInfo = new EnumItemTypeInfo(typeInfoEnumFieldNode.Name.Name, parameters);
+
+        return typeInfoEnumFieldNode;
+    }
+
+    public override TypeInfoEnumFieldParamNode VisitTypeInfoEnumFieldParamNode(
+        TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode)
+    {
+        VisitTypeInfoNode(typeInfoEnumFieldParamNode.TypeInfoNode);
+
+        typeInfoEnumFieldParamNode.TypeRef = typeInfoEnumFieldParamNode.TypeInfoNode.TypeRef;
+
+        return typeInfoEnumFieldParamNode;
     }
 }

@@ -7,11 +7,6 @@ public class StringTypeInfo : TypeInfo
         return "string";
     }
 
-    public override bool HasDeferredTypes()
-    {
-        return false;
-    }
-
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitStringTypeInfo(this);

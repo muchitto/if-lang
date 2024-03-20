@@ -21,11 +21,6 @@ public class NumberTypeInfo(NumberType type) : TypeInfo
         return NumberType.ToString().ToLower();
     }
 
-    public override bool HasDeferredTypes()
-    {
-        return false;
-    }
-
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitNumberTypeInfo(this);

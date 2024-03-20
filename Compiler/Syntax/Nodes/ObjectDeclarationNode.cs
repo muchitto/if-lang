@@ -6,7 +6,7 @@ public class ObjectDeclarationNode(
     NodeContext nodeContext,
     bool isImmediatelyInstanced,
     TypeInfoNameNode? baseName,
-    IdentifierNode name,
+    DeclarationNameNode name,
     List<DeclarationNode> fields,
     List<AnnotationNode> annotationNodes
 )

@@ -37,8 +37,6 @@ public abstract class TypeInfo
         }
     }
 
-    public abstract bool HasDeferredTypes();
-
     public static bool TryGetBuiltInType(string name, out TypeInfo typeInfo)
     {
         switch (name)

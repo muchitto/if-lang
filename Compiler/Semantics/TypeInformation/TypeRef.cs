@@ -1,5 +1,7 @@
 using Compiler.ErrorHandling;
 using Compiler.Semantics.TypeInformation.TypeComparer;
+using Compiler.Semantics.TypeInformation.Types;
+using Compiler.Semantics.TypeInformation.TypeVisitor;
 
 namespace Compiler.Semantics.TypeInformation;
 
@@ -42,5 +44,22 @@ public class TypeRef
     public bool Compare(TypeInfo other)
     {
         return Compare<BasicComparer>(other);
+    }
+
+    public bool HasDeferredTypes()
+    {
+        if (TypeInfo is DeferredTypeInfo)
+        {
+            return true;
+        }
+
+        var visitor = new DeferredTypesVisitor();
+        visitor.VisitTypeInfo(TypeInfo);
+        return visitor.HasDeferredTypes;
+    }
+
+    public override string ToString()
+    {
+        return TypeInfo?.ToString() ?? "null";
     }
 }

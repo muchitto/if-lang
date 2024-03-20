@@ -220,7 +220,8 @@ public class Parser(CompilationContext context)
                 }
 
                 var parameterContext = new NodeContext(parameterName.NodeContext.PositionData);
-                parameters.Add(new FunctionDeclarationParameterNode(parameterContext, parameterName, type));
+                parameters.Add(new FunctionDeclarationParameterNode(parameterContext,
+                    parameterName.ToDeclarationNameNode(), type));
 
                 if (IsNextEat(TokenType.Symbol, ","))
                 {
@@ -252,7 +253,8 @@ public class Parser(CompilationContext context)
 
         var functionDeclarationContext = new NodeContext(name.NodeContext.PositionData);
 
-        return new FunctionDeclarationNode(functionDeclarationContext, name, parameters, returnType, body, annotations);
+        return new FunctionDeclarationNode(functionDeclarationContext, name.ToDeclarationNameNode(), parameters,
+            returnType, body, annotations);
     }
 
     private BodyBlockNode ParseBlock()
@@ -456,7 +458,8 @@ public class Parser(CompilationContext context)
 
                     var parameterType = ParseTypeInfo();
 
-                    parameters.Add(new EnumDeclarationItemParameterNode(parameterName.NodeContext, parameterName,
+                    parameters.Add(new EnumDeclarationItemParameterNode(parameterName.NodeContext,
+                        parameterName.ToDeclarationNameNode(),
                         parameterType));
 
                     if (IsNextEat(TokenType.Symbol, ","))
@@ -470,7 +473,8 @@ public class Parser(CompilationContext context)
                 ExpectEatValue(TokenType.Symbol, ")");
             }
 
-            var enumItem = new EnumDeclarationItemNode(itemName.NodeContext, itemName, parameters);
+            var enumItem =
+                new EnumDeclarationItemNode(itemName.NodeContext, itemName.ToDeclarationNameNode(), parameters);
 
             items.Add(enumItem);
 
@@ -488,7 +492,7 @@ public class Parser(CompilationContext context)
 
         return new EnumDeclarationNode(
             enumDeclarationNodeContext,
-            name,
+            name.ToDeclarationNameNode(),
             items,
             annotations
         );
@@ -567,7 +571,7 @@ public class Parser(CompilationContext context)
 
         var externVariableNodeContext = new NodeContext(name.NodeContext.PositionData);
 
-        return new ExternVariableNode(externVariableNodeContext, name, type);
+        return new ExternVariableNode(externVariableNodeContext, name.ToDeclarationNameNode(), type);
     }
 
     private ExternFunctionNode ParseExternFunctionDeclaration()
@@ -584,7 +588,7 @@ public class Parser(CompilationContext context)
 
         var externFunctionNodeContext = new NodeContext(name.NodeContext.PositionData);
 
-        return new ExternFunctionNode(externFunctionNodeContext, name, parameters, returnType);
+        return new ExternFunctionNode(externFunctionNodeContext, name.ToDeclarationNameNode(), parameters, returnType);
     }
 
 
@@ -632,7 +636,7 @@ public class Parser(CompilationContext context)
             objectDeclarationNodeContext,
             isImmediatelyInstanced,
             baseName,
-            name,
+            name.ToDeclarationNameNode(),
             fields,
             annotations
         );
@@ -689,7 +693,8 @@ public class Parser(CompilationContext context)
 
             var objectVariableOverrideNodeContext = new NodeContext(name.NodeContext, value.NodeContext);
 
-            declaration = new ObjectVariableOverride(objectVariableOverrideNodeContext, name, value);
+            declaration =
+                new ObjectVariableOverride(objectVariableOverrideNodeContext, name.ToDeclarationNameNode(), value);
         }
         else
         {
@@ -771,13 +776,92 @@ public class Parser(CompilationContext context)
         );
     }
 
+    private List<TypeInfoEnumFieldParamNode> ParseTypeInfoEnumFieldParams()
+    {
+        var parameters = new List<TypeInfoEnumFieldParamNode>();
+
+        if (IsNextEat(TokenType.Symbol, "("))
+        {
+            while (!IsNext(TokenType.Symbol, ")"))
+            {
+                var parameterName = ParseSingleIdentifier();
+
+                ExpectEatValue(TokenType.Symbol, ":");
+
+                var parameterType = ParseTypeInfo();
+
+                var parameterNodeContext = new NodeContext(parameterName.NodeContext, parameterType.NodeContext);
+
+                parameters.Add(new TypeInfoEnumFieldParamNode(parameterNodeContext,
+                    parameterName.ToDeclarationNameNode(), parameterType));
+
+                if (IsNextEat(TokenType.Symbol, ","))
+                {
+                    continue;
+                }
+
+                break;
+            }
+
+            ExpectEatValue(TokenType.Symbol, ")");
+        }
+
+        return parameters;
+    }
+
+    private TypeInfoEnumNode ParseTypeInfoEnum(IdentifierNode firstName)
+    {
+        var fields = new List<TypeInfoEnumFieldNode>();
+
+
+        List<TypeInfoEnumFieldParamNode> parameters = [];
+        if (IsNext(TokenType.Symbol, "("))
+        {
+            parameters = ParseTypeInfoEnumFieldParams();
+        }
+
+        fields.Add(new TypeInfoEnumFieldNode(
+            firstName.NodeContext,
+            firstName.ToDeclarationNameNode(),
+            parameters
+        ));
+
+        while (IsNextEat(TokenType.Symbol, "|"))
+        {
+            var name = ParseSingleIdentifier();
+
+            parameters = [];
+
+            if (IsNext(TokenType.Symbol, "("))
+            {
+                parameters = ParseTypeInfoEnumFieldParams();
+            }
+
+            var enumFieldNodeContext = new NodeContext(name.NodeContext.PositionData);
+
+            fields.Add(new TypeInfoEnumFieldNode(enumFieldNodeContext, name.ToDeclarationNameNode(), parameters));
+        }
+
+        var enumNodeContext = new NodeContext(fields.First().NodeContext, fields.Last().NodeContext);
+
+        return new TypeInfoEnumNode(enumNodeContext, fields);
+    }
+
     private TypeInfoNode ParseTypeInfo()
     {
         if (IsNext(TokenType.Identifier))
         {
-            var typeNameToken = GetToken();
-            var typeNameContext = new NodeContext(typeNameToken.PositionData);
-            var typeName = new TypeInfoNameNode(typeNameContext, typeNameToken.Value);
+            var identifier = ParseSingleIdentifier();
+
+            // These are possible examples or any combination of these:
+            // First | Second | Third
+            // First(value : string) | Second | Third(value : string)
+            if (IsNext(TokenType.Symbol, "|") || IsNext(TokenType.Symbol, "("))
+            {
+                return ParseTypeInfoEnum(identifier);
+            }
+
+            var typeName = identifier.ToTypeInfoNameNode();
 
             return ParseTypeInfoPart(typeName);
         }
@@ -859,7 +943,8 @@ public class Parser(CompilationContext context)
             variableDeclarationNodeContext = name.NodeContext;
         }
 
-        return new VariableDeclarationNode(variableDeclarationNodeContext, name, type, value, annotationNodes);
+        return new VariableDeclarationNode(variableDeclarationNodeContext, name.ToDeclarationNameNode(), type, value,
+            annotationNodes);
     }
 
     private BaseNode ParseExpressionContinue(BaseNode lhs, int minPrecedence)
@@ -994,6 +1079,11 @@ public class Parser(CompilationContext context)
             return ParseFunctionCallWithParentheses(identifier);
         }
 
+        if (IsNext(TokenType.Symbol, "["))
+        {
+            return ParseArrayAccess(identifier);
+        }
+
         if (IsNextEat(TokenType.Symbol, "."))
         {
             return ParseMemberAccess(identifier);
@@ -1007,13 +1097,49 @@ public class Parser(CompilationContext context)
         return identifier;
     }
 
+    private ArrayAccessNode ParseArrayAccess(IdentifierNode baseObject)
+    {
+        BaseNode current = baseObject;
+        while (IsNextEat(TokenType.Symbol, "["))
+        {
+            var index = ParseExpression();
+
+            ExpectEatValue(TokenType.Symbol, "]");
+
+            var arrayAccessNodeContext = new NodeContext(baseObject.NodeContext, index.NodeContext);
+            current = new ArrayAccessNode(arrayAccessNodeContext, current, index);
+        }
+
+        return (ArrayAccessNode)current;
+    }
+
     private EnumShortHandNode ParseEnumShortHand()
     {
         var enumName = ParseSingleIdentifier();
 
+        var parameters = new List<BaseNode>();
+        if (IsNextEat(TokenType.Symbol, "("))
+        {
+            while (!IsNext(TokenType.Symbol, ")"))
+            {
+                var parameter = ParseExpression();
+
+                parameters.Add(parameter);
+
+                if (IsNextEat(TokenType.Symbol, ","))
+                {
+                    continue;
+                }
+
+                break;
+            }
+
+            ExpectEatValue(TokenType.Symbol, ")");
+        }
+
         var enumShortHandNodeContext = new NodeContext(enumName.NodeContext.PositionData);
 
-        return new EnumShortHandNode(enumShortHandNodeContext, enumName);
+        return new EnumShortHandNode(enumShortHandNodeContext, enumName.ToDeclarationNameNode(), parameters);
     }
 
     private ArrayLiteralNode ParseArrayLiteral()

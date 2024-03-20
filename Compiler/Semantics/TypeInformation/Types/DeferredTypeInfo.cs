@@ -7,11 +7,6 @@ public class DeferredTypeInfo : TypeInfo
         return "deferred";
     }
 
-    public override bool HasDeferredTypes()
-    {
-        return true;
-    }
-
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitDeferredTypeInfo(this);

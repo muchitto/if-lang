@@ -10,11 +10,6 @@ public class FunctionTypeInfo(TypeRef returnType, Dictionary<string, TypeRef> pa
         return $"Function<{ReturnType}>";
     }
 
-    public override bool HasDeferredTypes()
-    {
-        return ReturnType.TypeInfo.HasDeferredTypes() || Parameters.Values.Any(x => x.TypeInfo.HasDeferredTypes());
-    }
-
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitFunctionTypeInfo(this);

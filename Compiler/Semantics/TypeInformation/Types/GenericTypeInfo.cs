@@ -10,11 +10,6 @@ public class GenericTypeInfo(string name, List<TypeRef> genericParams) : TypeInf
         return $"{Name}[{string.Join(", ", GenericParams.Select(x => x.ToString()))}]";
     }
 
-    public override bool HasDeferredTypes()
-    {
-        return GenericParams.Any(x => x.TypeInfo.HasDeferredTypes());
-    }
-
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitGenericTypeInfo(this);

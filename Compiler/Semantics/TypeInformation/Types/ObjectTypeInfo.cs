@@ -13,19 +13,6 @@ public class ObjectTypeInfo(TypeRef? baseClass, string name, Dictionary<string, 
         return Name;
     }
 
-    public override bool HasDeferredTypes()
-    {
-        return Fields.Values.Any(x =>
-        {
-            if (x.TypeInfo == this)
-            {
-                return false;
-            }
-
-            return x.TypeInfo.HasDeferredTypes();
-        });
-    }
-
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitObjectTypeInfo(this);
@@ -38,7 +25,7 @@ public class ObjectTypeInfo(TypeRef? baseClass, string name, Dictionary<string, 
             return false;
         }
 
-        return Name == otherTypeInfo.Name || baseClassTypeInfo.IsChildOf(otherTypeInfo);
+        return baseClassTypeInfo.Name == otherTypeInfo.Name || baseClassTypeInfo.IsChildOf(otherTypeInfo);
     }
 
     public bool IsParentOf(ObjectTypeInfo typeInfo)

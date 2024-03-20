@@ -2,7 +2,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class ObjectVariableOverride(NodeContext nodeContext, IdentifierNode name, BaseNode value)
+public class ObjectVariableOverride(NodeContext nodeContext, DeclarationNameNode name, BaseNode value)
     : DeclarationNode(nodeContext, name, [])
 {
     public BaseNode Value { get; } = value;

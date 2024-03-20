@@ -71,6 +71,16 @@ public static class OperatorExtensions
             _ => throw new Exception($"Unknown operator: {op}")
         };
     }
+
+    public static bool IsLogicalOperator(this Operator op)
+    {
+        return op switch
+        {
+            Operator.Equal or Operator.NotEqual or Operator.LessThan or Operator.LessThanOrEqual or Operator.GreaterThan
+                or Operator.GreaterThanOrEqual or Operator.And or Operator.Or or Operator.Not or Operator.Is => true,
+            _ => false
+        };
+    }
 }
 
 public enum Associativity

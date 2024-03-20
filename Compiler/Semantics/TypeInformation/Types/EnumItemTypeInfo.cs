@@ -12,16 +12,8 @@ public class EnumItemTypeInfo : TypeInfo
 
     public Dictionary<string, TypeRef> Parameters { get; }
 
-    public override bool HasDeferredTypes()
+    public override void Accept(ITypeInfoVisitor typeInfoVisitor)
     {
-        foreach (var parameter in Parameters.Values)
-        {
-            if (parameter.TypeInfo.HasDeferredTypes())
-            {
-                return true;
-            }
-        }
-
-        return false;
+        typeInfoVisitor.VisitEnumItemTypeInfo(this);
     }
 }

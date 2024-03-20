@@ -4,7 +4,7 @@ namespace Compiler.Syntax.Nodes;
 
 public class FunctionDeclarationNode(
     NodeContext nodeContext,
-    IdentifierNode name,
+    DeclarationNameNode name,
     List<FunctionDeclarationParameterNode> parameterNodes,
     TypeInfoNode? returnTypeInfo,
     BodyBlockNode body,

@@ -4,13 +4,13 @@ namespace Compiler.Syntax.Nodes;
 
 public class VariableDeclarationNode(
     NodeContext nodeContext,
-    IdentifierNode name,
+    DeclarationNameNode name,
     TypeInfoNode? typeInfo,
     BaseNode? value,
     List<AnnotationNode> annotationNodes)
     : DeclarationNode(nodeContext, name, annotationNodes)
 {
-    public TypeInfoNode? TypeName { get; } = typeInfo;
+    public TypeInfoNode? TypeInfo { get; } = typeInfo;
     public BaseNode? Value { get; } = value;
 
     public override void Accept(INodeVisitor nodeVisitor)

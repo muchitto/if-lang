@@ -7,10 +7,6 @@ public class VoidTypeInfo : TypeInfo
         return "void";
     }
 
-    public override bool HasDeferredTypes()
-    {
-        return false;
-    }
 
     public override void Accept(ITypeInfoVisitor visitor)
     {

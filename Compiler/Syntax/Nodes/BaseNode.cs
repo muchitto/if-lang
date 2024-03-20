@@ -12,5 +12,6 @@ public abstract class BaseNode(NodeContext nodeContext)
 
     public virtual void Accept(INodeVisitor nodeVisitor)
     {
+        nodeVisitor.VisitBaseNode(this);
     }
 }

@@ -2,9 +2,12 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class EnumShortHandNode(NodeContext nodeContext, IdentifierNode name) : BaseNode(nodeContext)
+public class EnumShortHandNode(NodeContext nodeContext, DeclarationNameNode name, List<BaseNode> parameters)
+    : BaseNode(nodeContext)
 {
-    public IdentifierNode Name { get; } = name;
+    public DeclarationNameNode Name { get; } = name;
+
+    public List<BaseNode> Parameters { get; } = parameters;
 
     public override void Accept(INodeVisitor nodeVisitor)
     {

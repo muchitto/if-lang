@@ -4,7 +4,7 @@ namespace Compiler.Syntax.Nodes;
 
 public class EnumDeclarationNode(
     NodeContext nodeContext,
-    IdentifierNode name,
+    DeclarationNameNode name,
     List<EnumDeclarationItemNode> items,
     List<AnnotationNode> annotationNodes)
     : DeclarationNode(nodeContext, name, annotationNodes)

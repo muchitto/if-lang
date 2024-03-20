@@ -7,11 +7,6 @@ public class UnknownTypeInfo : TypeInfo
         return "unknown";
     }
 
-    public override bool HasDeferredTypes()
-    {
-        return false;
-    }
-
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitUnknownTypeInfo(this);

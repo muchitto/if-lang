@@ -2,16 +2,17 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class EnumDeclarationItemParameterNode(
+public class TypeInfoEnumFieldNode(
     NodeContext nodeContext,
     DeclarationNameNode name,
-    TypeInfoNode typeInfoNode) : BaseNode(nodeContext)
+    List<TypeInfoEnumFieldParamNode> parameters)
+    : TypeInfoNode(nodeContext)
 {
     public DeclarationNameNode Name { get; } = name;
-    public TypeInfoNode TypeInfoNode { get; } = typeInfoNode;
+    public List<TypeInfoEnumFieldParamNode> Parameters { get; } = parameters;
 
     public override void Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitEnumDeclarationItemParameterNode(this);
+        nodeVisitor.VisitTypeInfoEnumFieldNode(this);
     }
 }

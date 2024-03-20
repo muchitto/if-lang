@@ -21,6 +21,9 @@ public abstract class BaseComparer<TError> : ITypeComparer<TError>
             DeferredTypeInfo t => CompareDeferredTypeInfo(t, other),
             EnumTypeInfo t => CompareEnumTypeInfo(t, other),
             EnumItemTypeInfo t => CompareEnumItemTypeInfo(t, other),
+            InlineEnumTypeInfo t => CompareInlineEnumTypeInfo(t, other),
+            StructureTypeInfo t => CompareStructureTypeInfo(t, other),
+
             _ => throw new NotImplementedException()
         };
     }
@@ -132,7 +135,7 @@ public abstract class BaseComparer<TError> : ITypeComparer<TError>
 
     public bool CompareEnumTypeInfo(EnumTypeInfo typeInfo, TypeInfo other)
     {
-        if (other is not EnumTypeInfo enumTypeInfo || typeInfo.Name == enumTypeInfo.Name)
+        if (other is not EnumTypeInfo enumTypeInfo || typeInfo.Name != enumTypeInfo.Name)
         {
             return false;
         }
@@ -158,7 +161,7 @@ public abstract class BaseComparer<TError> : ITypeComparer<TError>
 
     public bool CompareEnumItemTypeInfo(EnumItemTypeInfo typeInfo, TypeInfo other)
     {
-        if (other is not EnumItemTypeInfo enumItemTypeInfo || typeInfo.Name == enumItemTypeInfo.Name)
+        if (other is not EnumItemTypeInfo enumItemTypeInfo || typeInfo.Name != enumItemTypeInfo.Name)
         {
             return false;
         }
@@ -175,5 +178,27 @@ public abstract class BaseComparer<TError> : ITypeComparer<TError>
         }
 
         return true;
+    }
+
+    public bool CompareInlineEnumTypeInfo(InlineEnumTypeInfo typeInfo, TypeInfo other)
+    {
+        // TODO: Should we allow comparing inline enums with normal enums?
+        if (other is not InlineEnumTypeInfo inlineEnumTypeInfo)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < typeInfo.Items.Count; i++)
+        {
+            var ourItem = typeInfo.Items.ElementAt(i);
+            var theirItem = inlineEnumTypeInfo.Items.ElementAt(i);
+
+            if (Compare(ourItem.Value.TypeInfo, theirItem.Value.TypeInfo))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
