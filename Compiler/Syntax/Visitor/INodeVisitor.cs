@@ -89,4 +89,6 @@ public interface INodeVisitor
     public DeclarationNameNode VisitDeclarationNameNode(DeclarationNameNode declarationNameNode);
 
     public ArrayAccessNode VisitArrayAccessNode(ArrayAccessNode arrayAccessNode);
+
+    public OptionalTypeInfoNode VisitOptionalTypeInfoNode(OptionalTypeInfoNode optionalTypeInfoNode);
 }

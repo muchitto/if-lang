@@ -908,6 +908,11 @@ public class Parser(CompilationContext context)
             return ParseTypeInfoPart(new TypeInfoArrayNode(typeInfo.NodeContext, typeInfo));
         }
 
+        if (IsNextEat(TokenType.Symbol, "?"))
+        {
+            return ParseTypeInfoPart(new OptionalTypeInfoNode(typeInfo.NodeContext, typeInfo));
+        }
+
         return typeInfo;
     }
 

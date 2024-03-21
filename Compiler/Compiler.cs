@@ -25,7 +25,8 @@ public static class Compiler
             new ReorganizeNodesNodeVisitor(),
             new CollectDeclarationsNodeVisitor(semanticContext, semanticHandler),
             new TypeResolutionAndCheckNodeVisitor(semanticContext, semanticHandler),
-            new UnknownCheckerVisitor()
+            new UnknownCheckerVisitor(),
+            new NullCheckerNodeVisitor()
         };
 
         try

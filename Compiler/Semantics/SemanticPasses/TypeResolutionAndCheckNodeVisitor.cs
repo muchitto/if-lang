@@ -26,6 +26,14 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
         return programNode;
     }
 
+    public override OptionalTypeInfoNode VisitOptionalTypeInfoNode(OptionalTypeInfoNode optionalTypeInfoNode)
+    {
+        optionalTypeInfoNode.TypeRef.TypeInfo =
+            new GenericTypeInfo("Optional", [optionalTypeInfoNode.TypeInfo.TypeRef]);
+
+        return base.VisitOptionalTypeInfoNode(optionalTypeInfoNode);
+    }
+
     public override ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode)
     {
         if (objectDeclarationNode.BaseName != null)
@@ -737,6 +745,14 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
     public override MemberAccessNode VisitMemberAccessNode(MemberAccessNode memberAccessNode)
     {
         VisitBaseNode(memberAccessNode.BaseObject);
+
+        if (memberAccessNode.BaseObject.TypeRef.IsOptionalType)
+        {
+            throw new CompileError.SemanticError(
+                "trying to access member of optional type, unwrap it first",
+                memberAccessNode.NodeContext.PositionData
+            );
+        }
 
         if (memberAccessNode.BaseObject.TypeRef.TypeInfo is not ObjectTypeInfo objectTypeInfo)
         {

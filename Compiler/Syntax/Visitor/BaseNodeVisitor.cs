@@ -97,6 +97,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
             TypeInfoEnumFieldNode typeInfoEnumFieldNode => VisitTypeInfoEnumFieldNode(typeInfoEnumFieldNode),
             TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode => VisitTypeInfoEnumFieldParamNode(
                 typeInfoEnumFieldParamNode),
+            OptionalTypeInfoNode optionalTypeInfoNode => VisitOptionalTypeInfoNode(optionalTypeInfoNode),
             _ => throw new VisitorError("unhandled type info node")
         };
     }
@@ -474,5 +475,12 @@ public abstract class BaseNodeVisitor : INodeVisitor
         arrayAccessNode.Accessor.Accept(this);
 
         return arrayAccessNode;
+    }
+
+    public virtual OptionalTypeInfoNode VisitOptionalTypeInfoNode(OptionalTypeInfoNode optionalTypeInfoNode)
+    {
+        optionalTypeInfoNode.TypeInfo.Accept(this);
+
+        return optionalTypeInfoNode;
     }
 }

@@ -21,7 +21,7 @@ public class Lexer(CompilationContext context)
         "+", "-", "*", "/", "%", ">", "<", ">=", "<=", "==", "!=", "&&", "||", "!", "++", "--", "is"
     ];
 
-    public static readonly string[] Symbols = ["{", "}", "(", ")", "[", "]", "@", "->", ".", ":", ",", "|"];
+    public static readonly string[] Symbols = ["{", "}", "(", ")", "[", "]", "@", "->", ".", ":", ",", "|", "?"];
 
     private bool _lastTokenWasNewLine = true;
 

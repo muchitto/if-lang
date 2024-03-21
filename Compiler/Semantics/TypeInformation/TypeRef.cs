@@ -14,6 +14,8 @@ public class TypeRef
 
     public TypeInfo TypeInfo { get; set; }
 
+    public bool IsOptionalType => TypeInfo is GenericTypeInfo { Name: "Optional" };
+
     public bool Compare<TComparer>(TypeRef other, out List<CompileError> errors)
         where TComparer : ITypeComparer<CompileError>, new()
     {
