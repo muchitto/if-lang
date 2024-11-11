@@ -9,23 +9,15 @@ public enum SymbolType
     Type
 }
 
-public class Symbol
+public class Symbol(string name, Scope scope, BaseNode node, SymbolType type)
 {
-    public Symbol(string name, Scope scope, BaseNode node, SymbolType type)
-    {
-        Name = name;
-        Scope = scope;
-        Node = node;
-        Type = type;
-    }
-
-    public string Name { get; init; }
+    public string Name { get; init; } = name;
 
     public TypeRef TypeRef => Node.TypeRef;
 
-    public Scope Scope { get; init; }
+    public Scope Scope { get; init; } = scope;
 
-    public BaseNode Node { get; init; }
+    public BaseNode Node { get; init; } = node;
 
-    public SymbolType Type { get; init; }
+    public SymbolType Type { get; init; } = type;
 }

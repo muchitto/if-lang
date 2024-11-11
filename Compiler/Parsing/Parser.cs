@@ -2,6 +2,7 @@ using Compiler.ErrorHandling;
 using Compiler.Lexing;
 using Compiler.Syntax;
 using Compiler.Syntax.Nodes;
+using Compiler.Syntax.Nodes.TypeInfoNodes;
 
 namespace Compiler.Parsing;
 
@@ -20,6 +21,7 @@ public class Parser(CompilationContext context)
     {
         return new CompileError.ParseError(message, PeekToken().PositionData);
     }
+
 
     private Token GetToken()
     {
@@ -92,12 +94,14 @@ public class Parser(CompilationContext context)
 
     private void Expect(TokenType type, string? msg = null)
     {
-        if (!IsNext(type))
+        if (IsNext(type))
         {
-            var message = msg ?? $"expected {type} but got {PeekToken().Type}";
-
-            throw NextSyntaxError(message);
+            return;
         }
+
+        var message = msg ?? $"expected {type} but got {PeekToken().Type}";
+
+        throw NextSyntaxError(message);
     }
 
     private void ExpectValue(TokenType type, string value, string? msg = null)
@@ -288,7 +292,7 @@ public class Parser(CompilationContext context)
         return new BodyBlockNode(blocNodeContext, statements);
     }
 
-    private BaseNode? ParseStatement()
+    private BaseNode ParseStatement()
     {
         var nextToken = PeekToken();
 
@@ -315,30 +319,36 @@ public class Parser(CompilationContext context)
             return new ContinueStatementNode(new NodeContext(nextToken.PositionData));
         }
 
-        if (IsNext(TokenType.Identifier))
+        if (!IsNext(TokenType.Identifier))
         {
-            var identifier = ParseIdentifier();
+            throw NextSyntaxError("expected a statement");
+        }
 
-            if (PeekToken().IsAssignmentOperator())
-            {
-                var op = GetToken().ToOperator();
+        var identifier = ParseIdentifier();
 
-                var value = ParseExpression();
+        if (PeekToken().IsAssignmentOperator())
+        {
+            var op = GetToken().ToOperator();
 
-                var assignmentNodeContext = new NodeContext(identifier.NodeContext, value.NodeContext);
+            var value = ParseExpression();
 
-                return new AssignmentNode(assignmentNodeContext, identifier, value, op);
-            }
+            var assignmentNodeContext = new NodeContext(identifier.NodeContext, value.NodeContext);
 
+            return new AssignmentNode(assignmentNodeContext, identifier, value, op);
+        }
+
+        if (identifier is not MemberAccessNode { Member: IdentifierNode }
+            && !PeekToken().Is(TokenType.NewLine))
+        {
             return ParseFunctionCall(identifier);
         }
 
-        throw NextSyntaxError("expected a statement");
+        return identifier;
     }
 
     private BaseNode ParseBlockStatementOrDeclaration()
     {
-        if (IsNext(TokenType.Keyword, "var") || IsNext(TokenType.Keyword, "def") || IsNext(TokenType.Keyword, "new"))
+        if (IsNext(TokenType.Keyword, "var") || IsNext(TokenType.Keyword, "func") || IsNext(TokenType.Keyword, "new"))
         {
             return ParseDeclaration();
         }
@@ -359,7 +369,7 @@ public class Parser(CompilationContext context)
         return statement;
     }
 
-    private BaseNode? ParseControlFlowStatement()
+    private BaseNode ParseControlFlowStatement()
     {
         BaseNode? controlFlowStatement = null;
 
@@ -394,6 +404,22 @@ public class Parser(CompilationContext context)
         RecordNewLines.Pop();
     }
 
+    private void ExpectEndOfDeclaration()
+    {
+        if (IsEndOfDeclaration())
+        {
+            GetToken();
+            return;
+        }
+
+        throw NextSyntaxError("expected end of declaration");
+    }
+
+    private bool IsEndOfDeclaration()
+    {
+        return IsSentenceEnd() || IsNext(TokenType.EndOfFile);
+    }
+
     private DeclarationNode ParseDeclaration()
     {
         var annotations = CollectAnnotations();
@@ -405,15 +431,15 @@ public class Parser(CompilationContext context)
 
             declaration = ParseVariableDeclaration(annotations);
 
-            ExpectEatSentenceEnd();
+            ExpectEndOfDeclaration();
 
             EndRecordNewLinesMode();
         }
-        else if (IsNextEat(TokenType.Keyword, "def"))
+        else if (IsNextEat(TokenType.Keyword, "func"))
         {
             declaration = ParseFunctionDeclaration(annotations);
         }
-        else if (IsNextEat(TokenType.Keyword, "new"))
+        else if (IsNextEat(TokenType.Keyword, "new") || IsNextEat(TokenType.Keyword, "class"))
         {
             declaration = ParseObjectDeclaration(annotations);
         }
@@ -443,7 +469,7 @@ public class Parser(CompilationContext context)
 
             var parameters = new List<EnumDeclarationItemParameterNode>();
 
-            if (parameters.Any(p => p.Name.Name == itemName.Name))
+            if (parameters.Any(p => p.Named.Name == itemName.Name))
             {
                 throw NextSyntaxError($"parameter {itemName.Name} already exists in the enum");
             }
@@ -553,7 +579,7 @@ public class Parser(CompilationContext context)
             return ParseExternVariableDeclaration();
         }
 
-        if (IsNextEat(TokenType.Keyword, "def"))
+        if (IsNextEat(TokenType.Keyword, "func"))
         {
             return ParseExternFunctionDeclaration();
         }
@@ -574,9 +600,41 @@ public class Parser(CompilationContext context)
         return new ExternVariableNode(externVariableNodeContext, name.ToDeclarationNameNode(), type);
     }
 
+    private List<TypeInfoNode> ParseGenericArguments()
+    {
+        ExpectEatValue(TokenType.Operator, "<");
+
+        var arguments = new List<TypeInfoNode>();
+
+        while (!IsNext(TokenType.Operator, ">"))
+        {
+            var argument = ParseSingleIdentifier();
+
+            arguments.Add(argument.ToTypeInfoNameNode());
+
+            if (IsNextEat(TokenType.Symbol, ","))
+            {
+                continue;
+            }
+
+            break;
+        }
+
+        ExpectEatValue(TokenType.Operator, ">");
+
+        return arguments;
+    }
+
     private ExternFunctionNode ParseExternFunctionDeclaration()
     {
         var name = ParseSingleIdentifier();
+
+        List<TypeInfoNode> genericArguments = [];
+
+        if (IsNext(TokenType.Operator, "<"))
+        {
+            genericArguments = ParseGenericArguments();
+        }
 
         var parameters = ParseFunctionDeclarationArguments();
 
@@ -588,35 +646,27 @@ public class Parser(CompilationContext context)
 
         var externFunctionNodeContext = new NodeContext(name.NodeContext.PositionData);
 
-        return new ExternFunctionNode(externFunctionNodeContext, name.ToDeclarationNameNode(), parameters, returnType);
+        return new ExternFunctionNode(
+            externFunctionNodeContext,
+            name.ToDeclarationNameNode(),
+            parameters,
+            returnType,
+            genericArguments
+        );
     }
 
 
     private ObjectDeclarationNode ParseObjectDeclaration(List<AnnotationNode> annotations)
     {
-        var isImmediatelyInstanced = !IsNextEat(TokenType.Keyword, "type");
+        var isImmediatelyInstanced = IsNextEat(TokenType.Keyword, "new");
 
-        // It should get the first identifier and IF after that it finds the
-        // "called" identifier, it should use the first identifier as the base name
-        // and the second as the class name. But if it doesn't find the "called"
-        // identifier, it should use the first identifier as the class name and
-        // the base name should be null.
-        var firstIdentifier = ParseSingleIdentifier();
+        var name = ParseNamedNode().ToDeclarationNameNode();
+        ReferenceNamedNode? baseName = null;
 
-        IdentifierNode name;
-        TypeInfoNameNode? baseName = null;
-
-        var objectDeclarationNodeContext = new NodeContext(firstIdentifier.NodeContext.PositionData);
-        if (IsNextEat(TokenType.Identifier, "called"))
+        var objectDeclarationNodeContext = new NodeContext(name.NodeContext.PositionData);
+        if (IsNextEat(TokenType.Symbol, ":"))
         {
-            baseName = new TypeInfoNameNode(firstIdentifier.NodeContext, firstIdentifier.Name);
-            name = ParseSingleIdentifier();
-
-            objectDeclarationNodeContext = name.NodeContext;
-        }
-        else
-        {
-            name = firstIdentifier;
+            baseName = ParseNamedNode().ToReferenceNameNode();
         }
 
         ExpectEatValue(TokenType.Symbol, "{");
@@ -635,31 +685,49 @@ public class Parser(CompilationContext context)
         return new ObjectDeclarationNode(
             objectDeclarationNodeContext,
             isImmediatelyInstanced,
+            name,
             baseName,
-            name.ToDeclarationNameNode(),
             fields,
             annotations
         );
     }
 
+    private NamedNode ParseNamedNode()
+    {
+        var name = ParseSingleIdentifier();
+
+        var genericArguments = new List<TypeInfoNode>();
+
+        if (IsNext(TokenType.Operator, "<"))
+        {
+            genericArguments = ParseGenericArguments();
+        }
+
+        return new NamedNode(name.NodeContext, name.Name, genericArguments);
+    }
+
+
     private List<AnnotationNode> CollectAnnotations()
     {
-        var annotations = new List<AnnotationNode>();
-
-        if (IsNext(TokenType.Symbol, "@"))
+        if (!IsNext(TokenType.Symbol, "@"))
         {
-            StartRecordNewLinesMode(true);
-            while (IsNextEat(TokenType.Symbol, "@"))
-            {
-                var annotation = ParseAnnotation();
-
-                ExpectEatSentenceEnd("expected newline after annotation");
-
-                annotations.Add(annotation);
-            }
-
-            EndRecordNewLinesMode();
+            return [];
         }
+
+
+        StartRecordNewLinesMode(true);
+
+        List<AnnotationNode> annotations = [];
+        while (IsNextEat(TokenType.Symbol, "@"))
+        {
+            var annotation = ParseAnnotation();
+
+            ExpectEatSentenceEnd("expected newline after annotation");
+
+            annotations.Add(annotation);
+        }
+
+        EndRecordNewLinesMode();
 
         return annotations;
     }
@@ -679,7 +747,7 @@ public class Parser(CompilationContext context)
 
             EndRecordNewLinesMode();
         }
-        else if (IsNextEat(TokenType.Keyword, "def"))
+        else if (IsNextEat(TokenType.Keyword, "func"))
         {
             declaration = ParseFunctionDeclaration(annotations);
         }
@@ -809,10 +877,13 @@ public class Parser(CompilationContext context)
         return parameters;
     }
 
-    private TypeInfoEnumNode ParseTypeInfoEnum(IdentifierNode firstName)
+    /// <summary>
+    /// </summary>
+    /// <param name="firstName"></param>
+    /// <returns></returns>
+    private TypeInfoAnonymousEnumNode ParseTypeInfoEnum(IdentifierNode firstName)
     {
         var fields = new List<TypeInfoEnumFieldNode>();
-
 
         List<TypeInfoEnumFieldParamNode> parameters = [];
         if (IsNext(TokenType.Symbol, "("))
@@ -844,7 +915,7 @@ public class Parser(CompilationContext context)
 
         var enumNodeContext = new NodeContext(fields.First().NodeContext, fields.Last().NodeContext);
 
-        return new TypeInfoEnumNode(enumNodeContext, fields);
+        return new TypeInfoAnonymousEnumNode(enumNodeContext, fields);
     }
 
     private TypeInfoNode ParseTypeInfo()
@@ -862,6 +933,12 @@ public class Parser(CompilationContext context)
             }
 
             var typeName = identifier.ToTypeInfoNameNode();
+
+            if (IsNext(TokenType.Operator, "<"))
+            {
+                var genericArguments = ParseGenericArguments();
+                typeName = typeName.WithGenericParameters(genericArguments);
+            }
 
             return ParseTypeInfoPart(typeName);
         }
@@ -905,12 +982,29 @@ public class Parser(CompilationContext context)
         {
             ExpectEatValue(TokenType.Symbol, "]");
 
-            return ParseTypeInfoPart(new TypeInfoArrayNode(typeInfo.NodeContext, typeInfo));
+            return ParseTypeInfoPart(
+                new TypeInfoArrayNode(typeInfo.NodeContext, typeInfo, [])
+            );
+        }
+
+        if (IsNext(TokenType.Operator, "<"))
+        {
+            var genericArguments = ParseGenericArguments();
+
+
+            if (typeInfo is TypeInfoNameNode typeInfoNameNode)
+            {
+                return new TypeInfoNameNode(typeInfo.NodeContext, typeInfoNameNode.Name, genericArguments);
+            }
+
+            throw NextSyntaxError("cannot have generic arguments on a non-name type");
         }
 
         if (IsNextEat(TokenType.Symbol, "?"))
         {
-            return ParseTypeInfoPart(new OptionalTypeInfoNode(typeInfo.NodeContext, typeInfo));
+            return ParseTypeInfoPart(
+                new OptionalTypeInfoNode(typeInfo.NodeContext, typeInfo)
+            );
         }
 
         return typeInfo;
@@ -1286,7 +1380,9 @@ public class Parser(CompilationContext context)
             break;
         }
 
-        var functionCallNodeContext = new NodeContext(functionName.NodeContext, arguments.Last().NodeContext);
+        var lastArgument = arguments.LastOrDefault();
+
+        var functionCallNodeContext = new NodeContext(functionName.NodeContext, lastArgument.NodeContext);
         return new FunctionCallNode(functionCallNodeContext, functionName, arguments);
     }
 
@@ -1294,7 +1390,7 @@ public class Parser(CompilationContext context)
     {
         while (true)
         {
-            BaseNode member = ParseSingleIdentifier();
+            IdentifiableNode member = ParseSingleIdentifier();
 
             var memberAccessNodeContext = new NodeContext(baseObject.NodeContext, member.NodeContext);
             var memberAccess = new MemberAccessNode(memberAccessNodeContext, baseObject, member);
@@ -1308,6 +1404,9 @@ public class Parser(CompilationContext context)
             if (member is IdentifierNode identifierMember && IsNextEat(TokenType.Symbol, "("))
             {
                 member = ParseFunctionCallWithParentheses(identifierMember);
+
+                memberAccessNodeContext = new NodeContext(baseObject.NodeContext, member.NodeContext);
+                return new MemberAccessNode(memberAccessNodeContext, baseObject, member);
             }
 
             return memberAccess;
@@ -1388,5 +1487,13 @@ public class Parser(CompilationContext context)
     private bool IsEnd()
     {
         return Lexer.IsEnd() || PeekToken().Is(TokenType.EndOfFile);
+    }
+
+    public static ProgramNode Parse(string filename, string sourceCode)
+    {
+        var position = new PositionData(filename, sourceCode, 0, 0);
+        var compilationContext = new CompilationContext(position);
+        var parser = new Parser(compilationContext);
+        return parser.Parse();
     }
 }

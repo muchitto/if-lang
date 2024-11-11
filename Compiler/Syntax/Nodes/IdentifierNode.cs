@@ -1,10 +1,16 @@
+using Compiler.Syntax.Nodes.TypeInfoNodes;
 using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class IdentifierNode(NodeContext nodeContext, string name) : BaseNode(nodeContext)
+public class IdentifierNode(NodeContext nodeContext, string name) : IdentifiableNode(nodeContext)
 {
-    public string Name = name;
+    public string Name { get; set; } = name;
+
+    public override string GetName()
+    {
+        return Name;
+    }
 
     public override void Accept(INodeVisitor nodeVisitor)
     {
@@ -13,11 +19,11 @@ public class IdentifierNode(NodeContext nodeContext, string name) : BaseNode(nod
 
     public TypeInfoNameNode ToTypeInfoNameNode()
     {
-        return new TypeInfoNameNode(NodeContext, Name);
+        return new TypeInfoNameNode(NodeContext, Name, []);
     }
 
-    public DeclarationNameNode ToDeclarationNameNode()
+    public DeclarationNamedNode ToDeclarationNameNode()
     {
-        return new DeclarationNameNode(NodeContext, Name);
+        return new DeclarationNamedNode(NodeContext, Name, []);
     }
 }

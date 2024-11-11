@@ -1,39 +1,56 @@
 using Compiler.Semantics.TypeInformation.Types;
 using Compiler.Syntax.Nodes;
+using Compiler.Syntax.Visitor;
 
-namespace Compiler.Semantics;
+namespace Compiler.Semantics.SemanticPasses;
 
-public class SemanticHandler(SemanticContext semanticContext)
+public abstract class SemanticHelperBaseNodeVisitor(SemanticContext semanticContext)
+    : BaseNodeVisitor(semanticContext)
 {
-    protected SemanticContext SemanticContext = semanticContext;
+    public Scope? CurrentScope => SemanticContext.CurrentScope;
 
-    public Scope CurrentScope => SemanticContext.ScopeStack.Last();
-
-    public bool InGlobalScope => CurrentScope.Parent == null;
+    public bool InGlobalScope => CurrentScope?.Parent == null;
 
     public bool CanSetAlreadyDeclaredSymbol => InGlobalScope || InScopeType(ScopeType.Object);
 
-    public virtual Scope NewScope(ScopeType scopeType, BaseNode node)
+    public static List<BaseNodeVisitor> DefaultPasses(SemanticContext context)
     {
-        var parentScope = SemanticContext.ScopeStack.Count > 0 ? SemanticContext.ScopeStack.Last() : null;
-        var scope = new Scope(
-            parentScope,
-            scopeType,
-            node
-        );
+        return
+        [
+            new ReorganizeNodesNodeVisitor(context),
+            new CollectDeclarationsNodeVisitor(context),
+            new TypeResolutionNodeVisitor(context),
+            new UnknownCheckerVisitor(context),
+            new TypeCheckNodeVisitor(context),
+            new NullCheckerNodeVisitor(context),
+            new ControlFlowConstructionVisitor(context)
+        ];
+    }
+
+    public Scope NewScope(ScopeType scopeType, BaseNode node)
+    {
+        var scope = new Scope(CurrentScope, scopeType, node);
         SemanticContext.ScopeStack.Add(scope);
         SemanticContext.AllScopes.Add(scope);
         node.Scope = scope;
+
         return scope;
     }
 
-    public virtual Scope? RecallNodeScope(BaseNode node)
+    public Scope RecallScope(Scope scope)
     {
-        var scope = node.Scope;
+        SemanticContext.ScopeStack.Add(scope);
+
+        return scope;
+    }
+
+    public Scope RecallNodeScope(BaseNode baseNode)
+    {
+        var scope = baseNode.Scope;
 
         if (scope == null)
         {
-            throw new Exception("Node has no scope");
+            throw new Exception("node scope is empty");
         }
 
         SemanticContext.ScopeStack.Add(scope);
@@ -41,13 +58,9 @@ public class SemanticHandler(SemanticContext semanticContext)
         return scope;
     }
 
-
-    public virtual void SetSymbol(Symbol symbol, bool needToBeUnique)
+    public virtual void SetSymbol(Scope scope, Symbol symbol, bool needToBeUnique)
     {
-        var foundIndex = CurrentScope.Symbols.FindIndex(s =>
-        {
-            return s.Name == symbol.Name && s.Type == symbol.Type;
-        });
+        var foundIndex = scope.Symbols.FindIndex(s => s.Name == symbol.Name && s.Type == symbol.Type);
 
         if (foundIndex != -1)
         {
@@ -56,18 +69,29 @@ public class SemanticHandler(SemanticContext semanticContext)
                 throw new Exception($"symbol {symbol.Name} already exists in scope");
             }
 
-            CurrentScope.Symbols[foundIndex] = symbol;
+            scope.Symbols[foundIndex] = symbol;
         }
         else
         {
-            CurrentScope.Symbols.Add(symbol);
+            scope.Symbols.Add(symbol);
         }
     }
 
-    public virtual Scope? PopScope()
+    public virtual void SetSymbol(Symbol symbol, bool needToBeUnique)
+    {
+        SetSymbol(CurrentScope, symbol, needToBeUnique);
+    }
+
+
+    public virtual void SetSymbolParent(Symbol symbol, bool needToBeUnique)
+    {
+        SetSymbol(CurrentScope.Parent ?? CurrentScope, symbol, needToBeUnique);
+    }
+
+    public Scope? PopScope()
     {
         var scope = SemanticContext.ScopeStack.Last();
-        SemanticContext.ScopeStack.RemoveAt(SemanticContext.ScopeStack.Count - 1);
+        SemanticContext.ScopeStack.Remove(scope);
         return scope;
     }
 
@@ -105,11 +129,14 @@ public class SemanticHandler(SemanticContext semanticContext)
                         break;
                     }
 
-                    symbol = objectDeclarationNode.Scope?.Symbols.Find(s => s.Name == name && s.Type == type);
-
-                    if (symbol != null)
+                    if (objectDeclarationNode.Scope != null)
                     {
-                        return true;
+                        symbol = objectDeclarationNode.Scope.Symbols.Find(s => s.Name == name && s.Type == type);
+
+                        if (symbol != null)
+                        {
+                            return true;
+                        }
                     }
 
                     if (objectDeclarationNode.BaseName?.TypeRef.TypeInfo is not ObjectTypeInfo objectTypeInfo)
@@ -153,7 +180,7 @@ public class SemanticHandler(SemanticContext semanticContext)
         {
             if (scope.AttachedNode is DeclarationNode declarationNode)
             {
-                if (declarationNode.Name.Name == name)
+                if (declarationNode.Named.Name == name)
                 {
                     return true;
                 }
@@ -173,7 +200,7 @@ public class SemanticHandler(SemanticContext semanticContext)
         {
             if (scope.AttachedNode is DeclarationNode declarationNode)
             {
-                if (declarationNode.Name.Name == name)
+                if (declarationNode.Named.Name == name)
                 {
                     if (scope.Parent == null)
                     {
@@ -237,5 +264,18 @@ public class SemanticHandler(SemanticContext semanticContext)
     public virtual bool InScopeType(ScopeType scopeType)
     {
         return TraverseScopes(scope => scope.Type == scopeType);
+    }
+
+    public static void RunDefaultPasses(SemanticContext handler, BaseNode node)
+    {
+        foreach (var pass in DefaultPasses(handler))
+        {
+            node.Accept(pass);
+        }
+    }
+
+    public static void RunDefaultPasses(BaseNode node, SemanticContext semanticContext)
+    {
+        RunDefaultPasses(semanticContext, node);
     }
 }

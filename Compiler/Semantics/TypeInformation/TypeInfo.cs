@@ -1,4 +1,5 @@
 using Compiler.Semantics.TypeInformation.Types;
+using Compiler.Semantics.TypeInformation.TypeVisitor;
 
 namespace Compiler.Semantics.TypeInformation;
 
@@ -17,25 +18,15 @@ public abstract class TypeInfo
     public static readonly TypeInfo Float32 = new NumberTypeInfo(NumberType.Float32);
     public static readonly TypeInfo Float64 = new NumberTypeInfo(NumberType.Float64);
 
-
     public static readonly TypeInfo Boolean = new BooleanTypeInfo();
     public static readonly TypeInfo Unknown = new UnknownTypeInfo();
     public static readonly TypeInfo Deferred = new DeferredTypeInfo();
-    public static readonly TypeInfo Object = new ObjectTypeInfo(null, "object", [], null);
+    public static readonly TypeInfo Object = new ObjectTypeInfo(null, null, "object", []);
     public static readonly TypeRef ObjectRef = new(Object);
 
-    public bool IsIncomplete
-    {
-        get
-        {
-            return this switch
-            {
-                DeferredTypeInfo or UnknownTypeInfo => true,
-                GenericTypeInfo genericTypeInfo => genericTypeInfo.GenericParams.Any(x => x.TypeInfo.IsIncomplete),
-                _ => false
-            };
-        }
-    }
+    public bool IsIncomplete => IncompleteVisitor.IsIncompleteType(this);
+
+    public bool IsUnknown => UnknownVisitor.HasUnknownType(this);
 
     public static bool TryGetBuiltInType(string name, out TypeInfo typeInfo)
     {
@@ -92,5 +83,10 @@ public abstract class TypeInfo
     public virtual void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitTypeInfo(this);
+    }
+
+    public virtual bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        throw new NotImplementedException();
     }
 }

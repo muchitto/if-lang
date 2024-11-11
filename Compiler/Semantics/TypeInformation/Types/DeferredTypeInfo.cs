@@ -1,6 +1,6 @@
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class DeferredTypeInfo : TypeInfo
+public class DeferredTypeInfo : FoundationalTypeInfo
 {
     public override string ToString()
     {
@@ -10,5 +10,10 @@ public class DeferredTypeInfo : TypeInfo
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitDeferredTypeInfo(this);
+    }
+
+    public override bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        return comparer.CompareDeferredTypeInfo(this, other);
     }
 }

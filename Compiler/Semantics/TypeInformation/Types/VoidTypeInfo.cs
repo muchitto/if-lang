@@ -1,6 +1,6 @@
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class VoidTypeInfo : TypeInfo
+public class VoidTypeInfo : FoundationalTypeInfo
 {
     public override string ToString()
     {
@@ -11,5 +11,10 @@ public class VoidTypeInfo : TypeInfo
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitVoidTypeInfo(this);
+    }
+
+    public override bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        return comparer.CompareVoidTypeInfo(this, other);
     }
 }

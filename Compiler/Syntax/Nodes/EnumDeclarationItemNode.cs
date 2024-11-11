@@ -4,10 +4,10 @@ namespace Compiler.Syntax.Nodes;
 
 public class EnumDeclarationItemNode(
     NodeContext nodeContext,
-    DeclarationNameNode name,
+    DeclarationNamedNode named,
     List<EnumDeclarationItemParameterNode> parameterNodes) : BaseNode(nodeContext)
 {
-    public DeclarationNameNode Name { get; } = name;
+    public DeclarationNamedNode Named { get; } = named;
     public List<EnumDeclarationItemParameterNode> ParameterNodes { get; } = parameterNodes;
 
     public override void Accept(INodeVisitor nodeVisitor)

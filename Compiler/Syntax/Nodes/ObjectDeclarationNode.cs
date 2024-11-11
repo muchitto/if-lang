@@ -5,14 +5,14 @@ namespace Compiler.Syntax.Nodes;
 public class ObjectDeclarationNode(
     NodeContext nodeContext,
     bool isImmediatelyInstanced,
-    TypeInfoNameNode? baseName,
-    DeclarationNameNode name,
+    DeclarationNamedNode named,
+    ReferenceNamedNode? baseName,
     List<DeclarationNode> fields,
     List<AnnotationNode> annotationNodes
 )
-    : DeclarationNode(nodeContext, name, annotationNodes)
+    : DeclarationNode(nodeContext, named, annotationNodes)
 {
-    public TypeInfoNameNode? BaseName { get; } = baseName;
+    public ReferenceNamedNode? BaseName { get; } = baseName;
     public List<DeclarationNode> Fields { get; } = fields;
 
     public bool IsImmediatelyInstanced { get; } = isImmediatelyInstanced;

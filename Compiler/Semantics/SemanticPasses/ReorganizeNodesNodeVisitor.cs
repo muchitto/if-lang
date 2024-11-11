@@ -3,7 +3,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class ReorganizeNodesNodeVisitor : BaseNodeVisitor
+public class ReorganizeNodesNodeVisitor(SemanticContext semanticContext) : BaseNodeVisitor(semanticContext)
 {
     public override BodyBlockNode VisitBodyBlockNode(BodyBlockNode bodyBlockNode)
     {

@@ -2,10 +2,10 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class EnumShortHandNode(NodeContext nodeContext, DeclarationNameNode name, List<BaseNode> parameters)
+public class EnumShortHandNode(NodeContext nodeContext, DeclarationNamedNode named, List<BaseNode> parameters)
     : BaseNode(nodeContext)
 {
-    public DeclarationNameNode Name { get; } = name;
+    public DeclarationNamedNode Named { get; } = named;
 
     public List<BaseNode> Parameters { get; } = parameters;
 

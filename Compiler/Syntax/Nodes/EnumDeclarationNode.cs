@@ -4,10 +4,10 @@ namespace Compiler.Syntax.Nodes;
 
 public class EnumDeclarationNode(
     NodeContext nodeContext,
-    DeclarationNameNode name,
+    DeclarationNamedNode named,
     List<EnumDeclarationItemNode> items,
-    List<AnnotationNode> annotationNodes)
-    : DeclarationNode(nodeContext, name, annotationNodes)
+    List<AnnotationNode> annotationNodes
+) : DeclarationNode(nodeContext, named, annotationNodes)
 {
     public List<EnumDeclarationItemNode> Items { get; } = items;
 

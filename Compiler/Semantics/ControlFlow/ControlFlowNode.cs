@@ -2,12 +2,7 @@ using Compiler.Syntax;
 
 namespace Compiler.Semantics.ControlFlow;
 
-public class ControlFlowNode
+public abstract class ControlFlowNode(NodeContext nodeContext)
 {
-    public ControlFlowNode(NodeContext nodeContext)
-    {
-        NodeContext = nodeContext;
-    }
-
-    public NodeContext NodeContext { get; set; }
+    public NodeContext NodeContext { get; set; } = nodeContext;
 }

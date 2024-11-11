@@ -1,31 +1,15 @@
+using Compiler.ErrorHandling;
 using Compiler.Semantics.TypeInformation.Types;
 
 namespace Compiler.Semantics.TypeInformation.TypeComparer;
 
-public abstract class BaseComparer<TError> : ITypeComparer<TError>
+public abstract class BaseComparer : ITypeComparer
 {
-    public List<TError> Errors { get; } = [];
+    public List<CompileError> Errors { get; } = [];
 
     public virtual bool Compare(TypeInfo typeInfo, TypeInfo other)
     {
-        return typeInfo switch
-        {
-            VoidTypeInfo t => CompareVoidTypeInfo(t, other),
-            StringTypeInfo t => CompareStringTypeInfo(t, other),
-            UnknownTypeInfo t => CompareUnknownTypeInfo(t, other),
-            FunctionTypeInfo t => CompareFunctionTypeInfo(t, other),
-            NumberTypeInfo t => CompareNumberTypeInfo(t, other),
-            BooleanTypeInfo t => CompareBooleanTypeInfo(t, other),
-            ObjectTypeInfo t => CompareObjectTypeInfo(t, other),
-            GenericTypeInfo t => CompareGenericType(t, other),
-            DeferredTypeInfo t => CompareDeferredTypeInfo(t, other),
-            EnumTypeInfo t => CompareEnumTypeInfo(t, other),
-            EnumItemTypeInfo t => CompareEnumItemTypeInfo(t, other),
-            InlineEnumTypeInfo t => CompareInlineEnumTypeInfo(t, other),
-            StructureTypeInfo t => CompareStructureTypeInfo(t, other),
-
-            _ => throw new NotImplementedException()
-        };
+        return typeInfo.Compare(this, other);
     }
 
     public virtual bool CompareVoidTypeInfo(VoidTypeInfo typeInfo, TypeInfo other)
@@ -41,7 +25,7 @@ public abstract class BaseComparer<TError> : ITypeComparer<TError>
     public virtual bool CompareFunctionTypeInfo(FunctionTypeInfo typeInfo, TypeInfo other)
     {
         if (other is not FunctionTypeInfo functionTypeInfo ||
-            Compare(typeInfo.ReturnType.TypeInfo, functionTypeInfo.ReturnType.TypeInfo) ||
+            typeInfo.ReturnType.TypeInfo.Compare(this, functionTypeInfo.ReturnType.TypeInfo) ||
             typeInfo.Parameters.Count != functionTypeInfo.Parameters.Count)
         {
             return false;
@@ -51,13 +35,13 @@ public abstract class BaseComparer<TError> : ITypeComparer<TError>
         {
             var ourParameter = typeInfo.Parameters.ElementAt(i).Value.TypeInfo;
             var theirParameter = functionTypeInfo.Parameters.ElementAt(i).Value.TypeInfo;
-            if (Compare(ourParameter, ourParameter))
+            if (ourParameter.Compare(this, ourParameter))
             {
                 return false;
             }
         }
 
-        return true;
+        return false;
     }
 
     public virtual bool CompareStringTypeInfo(StringTypeInfo typeInfo, TypeInfo other)
@@ -98,13 +82,13 @@ public abstract class BaseComparer<TError> : ITypeComparer<TError>
             var ourParam = typeInfo.GenericParams[c];
             var theirParam = otherGenericTypeInfo.GenericParams[c];
 
-            if (!Compare(ourParam.TypeInfo, theirParam.TypeInfo))
+            if (!ourParam.TypeInfo.Compare(this, theirParam.TypeInfo))
             {
                 return false;
             }
         }
 
-        return true;
+        return typeInfo.Compare(this, other);
     }
 
     public virtual bool CompareDeferredTypeInfo(DeferredTypeInfo typeInfo, TypeInfo other)
@@ -140,15 +124,15 @@ public abstract class BaseComparer<TError> : ITypeComparer<TError>
             return false;
         }
 
-        if (typeInfo.Items.Count != enumTypeInfo.Items.Count)
+        if (typeInfo.Fields.Count != enumTypeInfo.Fields.Count)
         {
             return false;
         }
 
-        for (var i = 0; i < typeInfo.Items.Count; i++)
+        for (var i = 0; i < typeInfo.Fields.Count; i++)
         {
-            var ourItem = typeInfo.Items.ElementAt(i).Value;
-            var theirItem = enumTypeInfo.Items.ElementAt(i).Value;
+            var ourItem = typeInfo.Fields.ElementAt(i).Value;
+            var theirItem = enumTypeInfo.Fields.ElementAt(i).Value;
 
             if (!Compare(ourItem.TypeInfo, theirItem.TypeInfo))
             {
@@ -199,6 +183,27 @@ public abstract class BaseComparer<TError> : ITypeComparer<TError>
             }
         }
 
-        return false;
+        return true;
+    }
+
+    public bool CompareAnonymousEnumTypeInfo(AnonymousEnumTypeInfo typeInfo, TypeInfo other)
+    {
+        if (other is not AnonymousEnumTypeInfo otherAnonymousTypeInfo)
+        {
+            return false;
+        }
+
+        foreach (var (name, value) in typeInfo.Fields)
+        {
+            if (otherAnonymousTypeInfo.Fields.TryGetValue(name, out var otherField)
+                && value.TypeInfo.Compare(this, otherField.TypeInfo))
+            {
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
     }
 }

@@ -1,9 +1,10 @@
+using Compiler.Syntax.Nodes.TypeInfoNodes;
 using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class ExternVariableNode(NodeContext nodeContext, DeclarationNameNode name, TypeInfoNode typeInfoNode)
-    : ExternNode(nodeContext, name)
+public class ExternVariableNode(NodeContext nodeContext, DeclarationNamedNode named, TypeInfoNode typeInfoNode)
+    : ExternNode(nodeContext, named)
 {
     public TypeInfoNode TypeInfoNode { get; } = typeInfoNode;
 

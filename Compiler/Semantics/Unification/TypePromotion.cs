@@ -3,7 +3,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Semantics.Unification;
 
-public class TypePromotion : BaseNodeVisitor
+public class TypePromotion(SemanticContext semanticContext) : BaseNodeVisitor(semanticContext)
 {
     public override ProgramNode VisitProgramNode(ProgramNode programNode)
     {

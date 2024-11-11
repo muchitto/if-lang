@@ -7,11 +7,16 @@ public class GenericTypeInfo(string name, List<TypeRef> genericParams) : TypeInf
 
     public override string ToString()
     {
-        return $"{Name}[{string.Join(", ", GenericParams.Select(x => x.ToString()))}]";
+        return $"{Name}<{string.Join(", ", GenericParams.Select(x => x.ToString()))}>";
     }
 
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitGenericTypeInfo(this);
+    }
+
+    public override bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        return comparer.CompareGenericType(this, other);
     }
 }

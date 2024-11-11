@@ -1,6 +1,6 @@
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class UnknownTypeInfo : TypeInfo
+public class UnknownTypeInfo : FoundationalTypeInfo
 {
     public override string ToString()
     {
@@ -10,5 +10,10 @@ public class UnknownTypeInfo : TypeInfo
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitUnknownTypeInfo(this);
+    }
+
+    public override bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        return comparer.CompareUnknownTypeInfo(this, other);
     }
 }

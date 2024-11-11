@@ -1,12 +1,13 @@
 using Compiler.ErrorHandling;
 using Compiler.Syntax.Nodes;
+using Compiler.Syntax.Nodes.TypeInfoNodes;
 using Compiler.Syntax.Visitor;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class UnknownCheckerVisitor : BaseNodeVisitor
+public class UnknownCheckerVisitor(SemanticContext semanticContext) : BaseNodeVisitor(semanticContext)
 {
-    public override TypeInfoNameNode VisitTypeNameNode(TypeInfoNameNode typeInfoNameNode)
+    public override TypeInfoNameNode VisitTypeInfoNameNode(TypeInfoNameNode typeInfoNameNode)
     {
         if (typeInfoNameNode.TypeRef.TypeInfo.IsIncomplete)
         {
@@ -16,7 +17,7 @@ public class UnknownCheckerVisitor : BaseNodeVisitor
             );
         }
 
-        return base.VisitTypeNameNode(typeInfoNameNode);
+        return base.VisitTypeInfoNameNode(typeInfoNameNode);
     }
 
     public override TypeInfoArrayNode VisitTypeInfoArrayNode(TypeInfoArrayNode typeInfoArrayNode)
@@ -72,7 +73,8 @@ public class UnknownCheckerVisitor : BaseNodeVisitor
     }
 
     public override StructureLiteralFieldNode VisitStructureLiteralFieldNode(
-        StructureLiteralFieldNode structureLiteralFieldNode)
+        StructureLiteralFieldNode structureLiteralFieldNode
+    )
     {
         if (structureLiteralFieldNode.TypeRef.TypeInfo.IsIncomplete)
         {
@@ -113,7 +115,7 @@ public class UnknownCheckerVisitor : BaseNodeVisitor
         return base.VisitBodyBlockNode(bodyBlockNode);
     }
 
-    public override NumberLiteralNode VisitNumberNode(NumberLiteralNode numberLiteralNode)
+    public override NumberLiteralNode VisitNumberLiteralNode(NumberLiteralNode numberLiteralNode)
     {
         if (numberLiteralNode.TypeRef.TypeInfo.IsIncomplete)
         {
@@ -123,11 +125,12 @@ public class UnknownCheckerVisitor : BaseNodeVisitor
             );
         }
 
-        return base.VisitNumberNode(numberLiteralNode);
+        return base.VisitNumberLiteralNode(numberLiteralNode);
     }
 
     public override FunctionCallArgumentNode VisitFunctionCallArgumentNode(
-        FunctionCallArgumentNode functionCallArgumentNode)
+        FunctionCallArgumentNode functionCallArgumentNode
+    )
     {
         if (functionCallArgumentNode.TypeRef.TypeInfo.IsIncomplete)
         {
@@ -141,7 +144,8 @@ public class UnknownCheckerVisitor : BaseNodeVisitor
     }
 
     public override VariableDeclarationNode VisitVariableDeclarationNode(
-        VariableDeclarationNode variableDeclarationNode)
+        VariableDeclarationNode variableDeclarationNode
+    )
     {
         if (variableDeclarationNode.TypeRef.TypeInfo.IsIncomplete)
         {
@@ -181,7 +185,8 @@ public class UnknownCheckerVisitor : BaseNodeVisitor
     }
 
     public override FunctionDeclarationNode VisitFunctionDeclarationNode(
-        FunctionDeclarationNode functionDeclarationNode)
+        FunctionDeclarationNode functionDeclarationNode
+    )
     {
         if (functionDeclarationNode.TypeRef.TypeInfo.IsIncomplete)
         {
@@ -247,7 +252,8 @@ public class UnknownCheckerVisitor : BaseNodeVisitor
     }
 
     public override FunctionDeclarationParameterNode VisitFunctionDeclarationParameterNode(
-        FunctionDeclarationParameterNode functionDeclarationParameterNode)
+        FunctionDeclarationParameterNode functionDeclarationParameterNode
+    )
     {
         if (functionDeclarationParameterNode.TypeRef.TypeInfo.IsIncomplete)
         {

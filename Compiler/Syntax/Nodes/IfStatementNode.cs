@@ -2,19 +2,20 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class IfStatementNode : BaseNode
+public class IfStatementNode(NodeContext nodeContext, BaseNode? expression, BodyBlockNode body, IfStatementNode? nextIf)
+    : BaseNode(nodeContext), IEquatable<BaseNode>
 {
-    public IfStatementNode(NodeContext nodeContext, BaseNode? expression, BodyBlockNode body, IfStatementNode? nextIf)
-        : base(nodeContext)
-    {
-        Expression = expression;
-        Body = body;
-        NextIf = nextIf;
-    }
+    public BaseNode? Expression { get; } = expression;
+    public BodyBlockNode Body { get; } = body;
+    public IfStatementNode? NextIf { get; } = nextIf;
 
-    public BaseNode? Expression { get; }
-    public BodyBlockNode Body { get; }
-    public IfStatementNode? NextIf { get; }
+    public bool Equals(BaseNode? other)
+    {
+        return other is IfStatementNode ifStatementNode &&
+               Equals(Expression, ifStatementNode.Expression) &&
+               Body.Equals(ifStatementNode.Body) &&
+               Equals(NextIf, ifStatementNode.NextIf);
+    }
 
     public override void Accept(INodeVisitor nodeVisitor)
     {

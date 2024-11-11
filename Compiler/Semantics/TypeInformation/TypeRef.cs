@@ -5,16 +5,13 @@ using Compiler.Semantics.TypeInformation.TypeVisitor;
 
 namespace Compiler.Semantics.TypeInformation;
 
-public class TypeRef
+public class TypeRef(TypeInfo typeInfo)
 {
-    public TypeRef(TypeInfo typeInfo)
-    {
-        TypeInfo = typeInfo;
-    }
-
-    public TypeInfo TypeInfo { get; set; }
+    public TypeInfo TypeInfo { get; set; } = typeInfo;
 
     public bool IsOptionalType => TypeInfo is GenericTypeInfo { Name: "Optional" };
+
+    public bool IsUnknown => typeInfo.IsUnknown;
 
     public bool Compare<TComparer>(TypeRef other, out List<CompileError> errors)
         where TComparer : ITypeComparer<CompileError>, new()

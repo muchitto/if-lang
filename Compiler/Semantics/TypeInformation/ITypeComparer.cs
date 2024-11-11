@@ -1,6 +1,11 @@
+using Compiler.ErrorHandling;
 using Compiler.Semantics.TypeInformation.Types;
 
 namespace Compiler.Semantics.TypeInformation;
+
+public interface ITypeComparer : ITypeComparer<CompileError>
+{
+}
 
 public interface ITypeComparer<TError>
 {
@@ -33,4 +38,6 @@ public interface ITypeComparer<TError>
     bool CompareEnumItemTypeInfo(EnumItemTypeInfo typeInfo, TypeInfo other);
 
     bool CompareInlineEnumTypeInfo(InlineEnumTypeInfo typeInfo, TypeInfo other);
+
+    bool CompareAnonymousEnumTypeInfo(AnonymousEnumTypeInfo typeInfo, TypeInfo other);
 }

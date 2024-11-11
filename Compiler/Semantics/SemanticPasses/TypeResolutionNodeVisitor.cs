@@ -5,23 +5,27 @@ using Compiler.Semantics.TypeInformation.TypeComparer;
 using Compiler.Semantics.TypeInformation.Types;
 using Compiler.Syntax;
 using Compiler.Syntax.Nodes;
+using Compiler.Syntax.Nodes.TypeInfoNodes;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
+public class TypeResolutionNodeVisitor(SemanticContext semanticContext)
+    : SemanticPassBaseNodeVisitor(semanticContext)
 {
-    public TypeResolutionAndCheckNodeVisitor(SemanticContext semanticContext, SemanticHandler semanticHandler) : base(
-        semanticContext, semanticHandler)
-    {
-    }
+    // The current declarations we are resolving, so that we do not get into infinite loops
+    // when resolving types.
+    private readonly Stack<DeclarationNode> _currentDeclarations = [];
+
+    public string CurrentFunctionName { get; private set; } = string.Empty;
+    public string CurrentObjectName { get; private set; } = string.Empty;
 
     public override ProgramNode VisitProgramNode(ProgramNode programNode)
     {
-        SemanticHandler.RecallNodeScope(programNode);
+        RecallNodeScope(programNode);
 
         base.VisitProgramNode(programNode);
 
-        SemanticHandler.PopScope();
+        PopScope();
 
         return programNode;
     }
@@ -34,16 +38,33 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
         return base.VisitOptionalTypeInfoNode(optionalTypeInfoNode);
     }
 
-    public override ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode)
+    private bool IsCurrentlyResolving(DeclarationNode declarationNode)
     {
-        if (objectDeclarationNode.BaseName != null)
+        if (!_currentDeclarations.Contains(declarationNode))
         {
-            VisitTypeNameNode(objectDeclarationNode.BaseName);
+            _currentDeclarations.Push(declarationNode);
+
+            return false;
         }
 
-        SemanticHandler.RecallNodeScope(objectDeclarationNode);
+        return true;
+    }
 
-        var name = objectDeclarationNode.Name.Name;
+    public void FreeCurrentResolving()
+    {
+        _currentDeclarations.Pop();
+    }
+
+    public override ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode)
+    {
+        AddObjectDeclarationNode(objectDeclarationNode);
+
+        if (objectDeclarationNode.BaseName != null)
+        {
+            VisitReferenceNameNode(objectDeclarationNode.BaseName);
+        }
+
+        RecallNodeScope(objectDeclarationNode);
 
         if (objectDeclarationNode.TypeRef.TypeInfo is not ObjectTypeInfo objectTypeInfo)
         {
@@ -53,37 +74,52 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             );
         }
 
-        foreach (var declarationNode in objectDeclarationNode.Fields)
+        foreach (var variableDeclarationNode in objectDeclarationNode.Fields.OfType<VariableDeclarationNode>())
         {
-            var visitedDeclarationNode = VisitDeclarationNode(declarationNode);
+            var variableName = variableDeclarationNode.Named.Name;
+
+            VisitVariableDeclarationNode(variableDeclarationNode);
+
+            objectTypeInfo.Fields[variableName] = variableDeclarationNode.TypeRef;
+        }
+
+        var notVariableDeclaration = objectDeclarationNode.Fields.Where(
+            d => d is not VariableDeclarationNode);
+
+        foreach (var functionDeclarationNode in notVariableDeclaration)
+        {
+            var visitedDeclarationNode = VisitDeclarationNode(functionDeclarationNode);
 
             if (visitedDeclarationNode.TypeRef.Compare(TypeInfo.Unknown))
             {
                 throw new CompileError.SemanticError(
-                    $"field {visitedDeclarationNode.Name.Name} type not resolved",
+                    $"field {visitedDeclarationNode.Named.Name} type not resolved",
                     visitedDeclarationNode.NodeContext.PositionData
                 );
             }
 
-            objectTypeInfo.Fields[visitedDeclarationNode.Name.Name] = visitedDeclarationNode.TypeRef;
+            objectTypeInfo.Fields[visitedDeclarationNode.Named.Name] = visitedDeclarationNode.TypeRef;
         }
 
-        SemanticHandler.PopScope();
+        PopScope();
 
         if (objectDeclarationNode.TypeRef.Compare(TypeInfo.Unknown))
         {
             throw new CompileError.SemanticError(
-                $"object {objectDeclarationNode.Name.Name} type not resolved",
+                $"object {objectDeclarationNode.Named.Name} type not resolved",
                 objectDeclarationNode.NodeContext.PositionData
             );
         }
 
+        PopObjectDeclarationNode();
+
         return objectDeclarationNode;
     }
 
-    public override TypeInfoNameNode VisitTypeNameNode(TypeInfoNameNode typeInfoNameNode)
+    /*
+    public override TypeInfoNameNode VisitTypeInfoNameNode(TypeInfoNameNode typeInfoNameNode)
     {
-        if (SemanticHandler.TryGetInNodeScope(typeInfoNameNode.Name, SymbolType.Type, out var nodeScopeSymbol))
+        if (TryGetInNodeScope(typeInfoNameNode.Name, SymbolType.Type, out var nodeScopeSymbol))
         {
             typeInfoNameNode.TypeRef = nodeScopeSymbol.TypeRef;
 
@@ -96,8 +132,51 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
         }
         else
         {
-            if (SemanticHandler.TryLookupType(typeInfoNameNode.Name, out var symbol))
+            if (TryLookupType(typeInfoNameNode.Name, out var symbol))
             {
+                if (symbol.TypeRef.TypeInfo.IsUnknown)
+                {
+                    if (symbol.TypeRef.TypeInfo is AbstractStructuralTypeInfo abstractStructuralTypeInfo)
+                    {
+                        NewScope(ScopeType.Object, symbol.Node);
+
+                        foreach (var (name, typeRef) in abstractStructuralTypeInfo.Fields)
+                        {
+                            if (!typeRef.TypeInfo.IsUnknown)
+                            {
+                                continue;
+                            }
+
+                            if (!TryLookupIdentifier(name, out symbol))
+                            {
+                                throw new CompileError.SemanticError(
+                                    $"field {name} not found",
+                                    typeInfoNameNode.NodeContext.PositionData
+                                );
+                            }
+
+                            RecallScope(symbol.Scope);
+
+                            VisitBaseNode(symbol.Node);
+
+                            PopScope();
+
+                            if (symbol.TypeRef.TypeInfo.IsUnknown)
+                            {
+                                throw new CompileError.SemanticError(
+                                    $"field {name} type not resolved",
+                                    typeInfoNameNode.NodeContext.PositionData
+                                );
+                            }
+                        }
+
+                        PopScope();
+                    }
+
+
+                    VisitBaseNode(symbol.Node);
+                }
+
                 typeInfoNameNode.TypeRef.TypeInfo = symbol.TypeRef.TypeInfo;
             }
             else
@@ -111,6 +190,7 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 
         return typeInfoNameNode;
     }
+    */
 
     public override ArrayLiteralNode VisitArrayLiteralNode(ArrayLiteralNode arrayLiteralNode)
     {
@@ -168,6 +248,8 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 
     public override StructureLiteralNode VisitStructureLiteralNode(StructureLiteralNode structureLiteralNode)
     {
+        var scope = NewScope(ScopeType.Object, structureLiteralNode);
+
         var fields = new Dictionary<string, TypeRef>();
         foreach (var field in structureLiteralNode.Fields)
         {
@@ -184,13 +266,20 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             fields.Add(field.Name.Name, visitedField.TypeRef);
         }
 
-        structureLiteralNode.TypeRef.TypeInfo = new StructureTypeInfo(fields);
+        structureLiteralNode.TypeRef.TypeInfo =
+            new StructureTypeInfo(
+                scope,
+                fields
+            );
+
+        PopScope();
 
         return base.VisitStructureLiteralNode(structureLiteralNode);
     }
 
     public override StructureLiteralFieldNode VisitStructureLiteralFieldNode(
-        StructureLiteralFieldNode structureLiteralFieldNode)
+        StructureLiteralFieldNode structureLiteralFieldNode
+    )
     {
         structureLiteralFieldNode.Field.Accept(this);
 
@@ -202,6 +291,7 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 
     public override TypeInfoStructureNode VisitTypeInfoStructureNode(TypeInfoStructureNode typeInfoStructureNode)
     {
+        var scope = NewScope(ScopeType.Object, typeInfoStructureNode);
         var fields = new Dictionary<string, TypeRef>();
         foreach (var field in typeInfoStructureNode.Fields)
         {
@@ -218,13 +308,16 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             fields.Add(field.Key, visitedField.TypeRef);
         }
 
-        typeInfoStructureNode.TypeRef.TypeInfo = new StructureTypeInfo(fields);
+        typeInfoStructureNode.TypeRef.TypeInfo = new StructureTypeInfo(scope, fields);
+
+        PopScope();
 
         return base.VisitTypeInfoStructureNode(typeInfoStructureNode);
     }
 
     public override FunctionDeclarationParameterNode VisitFunctionDeclarationParameterNode(
-        FunctionDeclarationParameterNode functionDeclarationParameterNode)
+        FunctionDeclarationParameterNode functionDeclarationParameterNode
+    )
     {
         if (!functionDeclarationParameterNode.TypeRef.Compare(TypeInfo.Unknown))
         {
@@ -235,14 +328,14 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 
         functionDeclarationParameterNode.TypeRef = visitedTypeNode.TypeRef;
 
-        SemanticHandler.SetSymbol(
+        SetSymbol(
             new Symbol(
-                functionDeclarationParameterNode.Name.Name,
-                SemanticHandler.CurrentScope,
+                functionDeclarationParameterNode.Named.Name,
+                CurrentScope,
                 functionDeclarationParameterNode,
                 SymbolType.Identifier
             ),
-            !SemanticHandler.CanSetAlreadyDeclaredSymbol
+            !CanSetAlreadyDeclaredSymbol
         );
 
         return functionDeclarationParameterNode;
@@ -250,7 +343,7 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 
     public override ObjectVariableOverride VisitObjectVariableOverride(ObjectVariableOverride objectVariableOverride)
     {
-        if (!SemanticHandler.TryGetScopeOfType(ScopeType.Object, out var objectScope) ||
+        if (!TryGetScopeOfType(ScopeType.Object, out var objectScope) ||
             objectScope.AttachedNode is not ObjectDeclarationNode)
         {
             throw new CompileError.SemanticError(
@@ -259,10 +352,10 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             );
         }
 
-        if (!SemanticHandler.TryLookupIdentifier(objectVariableOverride.Name.Name, out var variableSymbol))
+        if (!TryLookupIdentifier(objectVariableOverride.Named.Name, out var variableSymbol))
         {
             throw new CompileError.SemanticError(
-                $"object variable override {objectVariableOverride.Name.Name} not found",
+                $"object variable override {objectVariableOverride.Named.Name} not found",
                 objectVariableOverride.NodeContext.PositionData
             );
         }
@@ -270,7 +363,7 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
         if (variableSymbol.TypeRef.TypeInfo == TypeInfo.Unknown)
         {
             throw new CompileError.SemanticError(
-                $"object variable override {objectVariableOverride.Name.Name} type not resolved",
+                $"object variable override {objectVariableOverride.Named.Name} type not resolved",
                 objectVariableOverride.NodeContext.PositionData
             );
         }
@@ -281,14 +374,14 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 
         if (objectVariableOverride.Value.TypeRef.HasDeferredTypes())
         {
-            var inferenceVisitor = new InferenceVisitor();
+            var inferenceVisitor = new InferenceVisitor(SemanticContext);
             inferenceVisitor.VisitObjectVariableOverride(objectVariableOverride);
         }
 
         if (!variableSymbol.TypeRef.Compare(objectVariableOverride.Value.TypeRef))
         {
             throw new CompileError.SemanticError(
-                $"object variable override {objectVariableOverride.Name.Name} type mismatch",
+                $"object variable override {objectVariableOverride.Named.Name} type mismatch",
                 objectVariableOverride.NodeContext.PositionData
             );
         }
@@ -327,69 +420,6 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
         return arrayAccessNode;
     }
 
-    public override IdentifierNode VisitIdentifierNode(IdentifierNode identifierNode)
-    {
-        if (identifierNode.Name == "this")
-        {
-            if (!SemanticHandler.TryGetScopeOfType(ScopeType.Object, out var objectScope))
-            {
-                throw new CompileError.SemanticError(
-                    "this can only be used in object scope",
-                    identifierNode.NodeContext.PositionData
-                );
-            }
-
-            identifierNode.TypeRef = objectScope.AttachedNode.TypeRef;
-
-            return identifierNode;
-        }
-
-        if (identifierNode.Name == "super")
-        {
-            if (!SemanticHandler.TryGetScopeOfType(ScopeType.Object, out var objectScope))
-            {
-                throw new CompileError.SemanticError(
-                    "super can only be used in object scope",
-                    identifierNode.NodeContext.PositionData
-                );
-            }
-
-            if (objectScope.AttachedNode.TypeRef.TypeInfo is not ObjectTypeInfo objectTypeInfo)
-            {
-                throw new CompileError.SemanticError(
-                    "super can only be used in object scope",
-                    identifierNode.NodeContext.PositionData
-                );
-            }
-
-            if (objectTypeInfo.BaseClass == null)
-            {
-                throw new CompileError.SemanticError(
-                    "object has no base class",
-                    identifierNode.NodeContext.PositionData
-                );
-            }
-
-            identifierNode.TypeRef = objectTypeInfo.BaseClass;
-
-            return identifierNode;
-        }
-
-        if (SemanticHandler.TryLookupIdentifier(identifierNode.Name, out var symbol))
-        {
-            identifierNode.TypeRef = symbol.TypeRef;
-        }
-        else
-        {
-            throw new CompileError.SemanticError(
-                $"identifier {identifierNode.Name} not found",
-                identifierNode.NodeContext.PositionData
-            );
-        }
-
-        return identifierNode;
-    }
-
     public override EnumDeclarationNode VisitEnumDeclarationNode(EnumDeclarationNode enumDeclarationNode)
     {
         if (!enumDeclarationNode.TypeRef.Compare(TypeInfo.Unknown))
@@ -408,7 +438,8 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
     }
 
     public override EnumDeclarationItemNode VisitEnumDeclarationItemNode(
-        EnumDeclarationItemNode enumDeclarationItemNode)
+        EnumDeclarationItemNode enumDeclarationItemNode
+    )
     {
         if (!enumDeclarationItemNode.TypeRef.Compare(TypeInfo.Unknown))
         {
@@ -424,7 +455,8 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
     }
 
     public override EnumDeclarationItemParameterNode VisitEnumDeclarationItemParameterNode(
-        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode)
+        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode
+    )
     {
         if (!enumDeclarationItemParameterNode.TypeRef.Compare(TypeInfo.Unknown))
         {
@@ -453,6 +485,11 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
         return externFunctionNode;
     }
 
+    public override ExternVariableNode VisitExternVariableNode(ExternVariableNode externVariableNode)
+    {
+        return externVariableNode;
+    }
+
     public override IfStatementNode VisitIfStatementNode(IfStatementNode ifStatementNode)
     {
         if (ifStatementNode.Expression != null)
@@ -468,7 +505,7 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             }
         }
 
-        VisitBaseNode(ifStatementNode.Body);
+        VisitBodyBlockNode(ifStatementNode.Body);
 
         if (ifStatementNode.NextIf != null)
         {
@@ -494,7 +531,7 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 
         if (visitedLeft.TypeRef.HasDeferredTypes() || visitedRight.TypeRef.HasDeferredTypes())
         {
-            var inferenceVisitor = new InferenceVisitor();
+            var inferenceVisitor = new InferenceVisitor(SemanticContext);
             inferenceVisitor.VisitExpressionNode(expressionNode);
 
             if (visitedLeft.TypeRef.HasDeferredTypes() || visitedRight.TypeRef.HasDeferredTypes())
@@ -576,6 +613,23 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 
     public override FunctionCallNode VisitFunctionCallNode(FunctionCallNode functionCallNode)
     {
+        // Check if the function is a class initialization
+        if (TryLookupType(functionCallNode.Name.Name, out var symbol)
+            && symbol.TypeRef.TypeInfo is ObjectTypeInfo)
+        {
+            if (functionCallNode.Arguments.Count != 0)
+            {
+                throw new CompileError.SemanticError(
+                    "class initialization cannot have arguments",
+                    functionCallNode.NodeContext.PositionData
+                );
+            }
+
+            functionCallNode.TypeRef = symbol.TypeRef;
+
+            return functionCallNode;
+        }
+
         var visitedName = VisitIdentifierNode(functionCallNode.Name);
 
         if (visitedName.TypeRef.TypeInfo is not FunctionTypeInfo functionTypeInfo)
@@ -625,8 +679,14 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
     }
 
     public override VariableDeclarationNode VisitVariableDeclarationNode(
-        VariableDeclarationNode variableDeclarationNode)
+        VariableDeclarationNode variableDeclarationNode
+    )
     {
+        if (IsCurrentlyResolving(variableDeclarationNode))
+        {
+            return variableDeclarationNode;
+        }
+
         TypeRef? typeRef = null;
 
         if (variableDeclarationNode.TypeInfo != null)
@@ -661,10 +721,11 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
                     );
                 }
 
-                var inferenceVisitor = new InferenceVisitor();
+                var inferenceVisitor = new InferenceVisitor(SemanticContext);
                 inferenceVisitor.VisitVariableDeclarationNode(variableDeclarationNode);
             }
 
+            /*
             if (typeRef != null && !typeRef.Compare(visitedValue.TypeRef))
             {
                 throw new CompileError.SemanticError(
@@ -672,6 +733,7 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
                     variableDeclarationNode.NodeContext.PositionData
                 );
             }
+            */
 
             if (typeRef == null)
             {
@@ -689,15 +751,17 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
 
         variableDeclarationNode.TypeRef = typeRef;
 
-        SemanticHandler.SetSymbol(
+        SetSymbol(
             new Symbol(
-                variableDeclarationNode.Name.Name,
-                SemanticHandler.CurrentScope,
+                variableDeclarationNode.Named.Name,
+                CurrentScope,
                 variableDeclarationNode,
                 SymbolType.Identifier
             ),
-            !SemanticHandler.CanSetAlreadyDeclaredSymbol
+            !CanSetAlreadyDeclaredSymbol
         );
+
+        FreeCurrentResolving();
 
         return variableDeclarationNode;
     }
@@ -725,10 +789,11 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
         }
         else if (assignmentNode.Value is EnumShortHandNode)
         {
-            var inferenceVisitor = new InferenceVisitor();
+            var inferenceVisitor = new InferenceVisitor(SemanticContext);
             inferenceVisitor.VisitAssignmentNode(assignmentNode);
         }
 
+        /*
         if (!assignmentNode.Name.TypeRef.Compare(assignmentNode.Value.TypeRef))
         {
             throw new CompileError.SemanticError(
@@ -736,70 +801,18 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
                 assignmentNode.NodeContext.PositionData
             );
         }
+        */
 
         assignmentNode.TypeRef = assignmentNode.Value.TypeRef;
 
         return assignmentNode;
     }
 
-    public override MemberAccessNode VisitMemberAccessNode(MemberAccessNode memberAccessNode)
-    {
-        VisitBaseNode(memberAccessNode.BaseObject);
-
-        if (memberAccessNode.BaseObject.TypeRef.IsOptionalType)
-        {
-            throw new CompileError.SemanticError(
-                "trying to access member of optional type, unwrap it first",
-                memberAccessNode.NodeContext.PositionData
-            );
-        }
-
-        if (memberAccessNode.BaseObject.TypeRef.TypeInfo is not ObjectTypeInfo objectTypeInfo)
-        {
-            throw new CompileError.SemanticError(
-                "trying to access member of non-object",
-                memberAccessNode.NodeContext.PositionData
-            );
-        }
-
-        var name = "";
-
-        if (memberAccessNode.Member is IdentifierNode identifierNode)
-        {
-            name = identifierNode.Name;
-        }
-        else if (memberAccessNode.Member is FunctionCallNode functionCallNode)
-        {
-            name = functionCallNode.Name.Name;
-        }
-        else
-        {
-            throw new CompileError.SemanticError(
-                "member access node member is not identifier or function call",
-                memberAccessNode.NodeContext.PositionData
-            );
-        }
-
-        if (!objectTypeInfo.Fields.TryGetValue(name, out var typeRef))
-        {
-            throw new CompileError.SemanticError(
-                $"object {objectTypeInfo.Name} has no member {name}",
-                memberAccessNode.NodeContext.PositionData
-            );
-        }
-
-        memberAccessNode.Member.TypeRef = typeRef;
-
-        memberAccessNode.TypeRef = typeRef;
-
-        return memberAccessNode;
-    }
-
     public override ReturnStatementNode VisitReturnStatementNode(ReturnStatementNode returnStatementNode)
     {
         base.VisitReturnStatementNode(returnStatementNode);
 
-        if (!SemanticHandler.TryGetScopeOfType(ScopeType.Function, out var functionScope)
+        if (!TryGetScopeOfType(ScopeType.Function, out var functionScope)
             || functionScope.AttachedNode is not FunctionDeclarationNode functionDeclarationNode
             || functionScope.AttachedNode.TypeRef.TypeInfo is not FunctionTypeInfo functionTypeInfo)
         {
@@ -821,12 +834,13 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             );
         }
 
+        /*
         if (!functionTypeInfo.ReturnType.Compare(returnStatementNode.TypeRef))
         {
             if (functionTypeInfo.ReturnType.TypeInfo != TypeInfo.Void && returnStatementNode.Value == null)
             {
                 throw new CompileError.SemanticError(
-                    $"function {functionDeclarationNode.Name.Name} requires a return value of type {functionTypeInfo.ReturnType.TypeInfo}",
+                    $"function {functionDeclarationNode.Named.Name} requires a return value of type {functionTypeInfo.ReturnType.TypeInfo}",
                     returnStatementNode.NodeContext.PositionData
                 );
             }
@@ -836,6 +850,7 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
                 returnStatementNode.NodeContext.PositionData
             );
         }
+        */
 
         returnStatementNode.TypeRef = functionTypeInfo.ReturnType;
 
@@ -843,7 +858,8 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
     }
 
     public override FunctionCallArgumentNode VisitFunctionCallArgumentNode(
-        FunctionCallArgumentNode functionCallArgumentNode)
+        FunctionCallArgumentNode functionCallArgumentNode
+    )
     {
         var visitedValue = VisitBaseNode(functionCallArgumentNode.Value);
 
@@ -852,52 +868,30 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
         return functionCallArgumentNode;
     }
 
-    public override NumberLiteralNode VisitNumberNode(NumberLiteralNode numberLiteralNode)
-    {
-        if (numberLiteralNode.Number.Contains('.'))
-        {
-            numberLiteralNode.TypeRef = new TypeRef(TypeInfo.Float);
-        }
-        else
-        {
-            numberLiteralNode.TypeRef = new TypeRef(TypeInfo.Int);
-        }
-
-        return numberLiteralNode;
-    }
-
-    public override StringLiteralNode VisitStringLiteralNode(StringLiteralNode stringLiteralNode)
-    {
-        stringLiteralNode.TypeRef = new TypeRef(TypeInfo.String);
-
-        return base.VisitStringLiteralNode(stringLiteralNode);
-    }
-
-    public override BooleanLiteralNode VisitBooleanLiteralNode(BooleanLiteralNode booleanLiteralNode)
-    {
-        booleanLiteralNode.TypeRef = new TypeRef(TypeInfo.Boolean);
-
-        return base.VisitBooleanLiteralNode(booleanLiteralNode);
-    }
-
     public override FunctionDeclarationNode VisitFunctionDeclarationNode(
-        FunctionDeclarationNode functionDeclarationNode)
+        FunctionDeclarationNode functionDeclarationNode
+    )
     {
+        if (IsCurrentlyResolving(functionDeclarationNode))
+        {
+            return functionDeclarationNode;
+        }
+
         if (functionDeclarationNode.Scope == null)
         {
             throw new CompileError.SemanticError(
-                $"function {functionDeclarationNode.Name.Name} has no scope",
+                $"function {functionDeclarationNode.Named.Name} has no scope",
                 functionDeclarationNode.NodeContext.PositionData
             );
         }
 
-        if (SemanticHandler.InScopeType(ScopeType.Function))
+        if (InScopeType(ScopeType.Function))
         {
-            SemanticHandler.NewScope(ScopeType.Function, functionDeclarationNode);
+            NewScope(ScopeType.Function, functionDeclarationNode);
         }
         else
         {
-            SemanticHandler.RecallNodeScope(functionDeclarationNode);
+            RecallNodeScope(functionDeclarationNode);
         }
 
         var parameters = new Dictionary<string, TypeRef>();
@@ -908,17 +902,17 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             if (parameterNode.TypeRef.Compare(TypeInfo.Unknown))
             {
                 throw new CompileError.SemanticError(
-                    $"function parameter {parameterNode.Name.Name} type not resolved",
+                    $"function parameter {parameterNode.Named.Name} type not resolved",
                     parameterNode.NodeContext.PositionData
                 );
             }
 
-            parameters.Add(parameterNode.Name.Name, parameterNode.TypeRef);
+            parameters.Add(parameterNode.Named.Name, parameterNode.TypeRef);
         }
 
         var visitedBlockNode = VisitBodyBlockNode(functionDeclarationNode.Body);
 
-        SemanticHandler.PopScope();
+        PopScope();
 
         if (functionDeclarationNode.ReturnTypeInfo != null)
         {
@@ -942,7 +936,7 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             if (visitedBlockNode.Statements.Count > 0 && visitedBlockNode.Statements.Last() is not ReturnStatementNode)
             {
                 throw new CompileError.SemanticError(
-                    $"last statement in function {functionDeclarationNode.Name.Name} must be a return statement",
+                    $"last statement in function {functionDeclarationNode.Named.Name} must be a return statement",
                     functionDeclarationNode.NodeContext.PositionData
                 );
             }
@@ -950,60 +944,64 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             if (!functionDeclarationNode.Scope.ReturnStatementFound)
             {
                 throw new CompileError.SemanticError(
-                    $"function {functionDeclarationNode.Name.Name} requires a return statement",
+                    $"function {functionDeclarationNode.Named.Name} requires a return statement",
                     functionDeclarationNode.NodeContext.PositionData
                 );
             }
         }
 
-        SemanticHandler.SetSymbol(
+        SetSymbol(
             new Symbol(
-                functionDeclarationNode.Name.Name,
-                SemanticHandler.CurrentScope,
+                functionDeclarationNode.Named.Name,
+                CurrentScope,
                 functionDeclarationNode,
                 SymbolType.Identifier
             ),
-            !SemanticHandler.CanSetAlreadyDeclaredSymbol
+            !CanSetAlreadyDeclaredSymbol
         );
+
+        FreeCurrentResolving();
 
         return functionDeclarationNode;
     }
 
     public override BodyBlockNode VisitBodyBlockNode(BodyBlockNode bodyBlockNode)
     {
-        SemanticHandler.NewScope(ScopeType.BlockBody, bodyBlockNode);
+        NewScope(ScopeType.BlockBody, bodyBlockNode);
 
         foreach (var statement in bodyBlockNode.Statements)
         {
             var visitedStatement = VisitBaseNode(statement);
         }
 
-        SemanticHandler.PopScope();
+        PopScope();
 
         return bodyBlockNode;
     }
 
-    public override TypeInfoEnumNode VisitTypeInfoEnumNode(TypeInfoEnumNode typeInfoEnumNode)
+    public override TypeInfoAnonymousEnumNode VisitTypeInfoAnonymousEnumNode(
+        TypeInfoAnonymousEnumNode typeInfoAnonymousEnumNode
+    )
     {
         var fields = new Dictionary<string, TypeRef>();
-        foreach (var field in typeInfoEnumNode.Fields)
+        foreach (var field in typeInfoAnonymousEnumNode.Fields)
         {
             VisitTypeInfoEnumFieldNode(field);
 
             if (field.TypeRef.Compare(TypeInfo.Unknown))
             {
                 throw new CompileError.SemanticError(
-                    $"enum field {field.Name.Name} type not resolved",
+                    $"enum field {field.Named.Name} type not resolved",
                     field.NodeContext.PositionData
                 );
             }
 
-            fields.Add(field.Name.Name, field.TypeRef);
+            fields.Add(field.Named.Name, field.TypeRef);
         }
 
-        typeInfoEnumNode.TypeRef.TypeInfo = new InlineEnumTypeInfo(fields);
+        typeInfoAnonymousEnumNode.TypeRef.TypeInfo = new InlineEnumTypeInfo(fields);
 
-        return typeInfoEnumNode;
+        return typeInfoAnonymousEnumNode;
     }
 
     public override TypeInfoEnumFieldNode VisitTypeInfoEnumFieldNode(TypeInfoEnumFieldNode typeInfoEnumFieldNode)
@@ -1016,26 +1014,45 @@ public class TypeResolutionAndCheckNodeVisitor : SemanticPassBaseNodeVisitor
             if (parameter.TypeRef.Compare(TypeInfo.Unknown))
             {
                 throw new CompileError.SemanticError(
-                    $"enum field parameter {parameter.Name.Name} type not resolved",
+                    $"enum field parameter {parameter.Named.Name} type not resolved",
                     parameter.NodeContext.PositionData
                 );
             }
 
-            parameters.Add(parameter.Name.Name, parameter.TypeRef);
+            parameters.Add(parameter.Named.Name, parameter.TypeRef);
         }
 
-        typeInfoEnumFieldNode.TypeRef.TypeInfo = new EnumItemTypeInfo(typeInfoEnumFieldNode.Name.Name, parameters);
+        typeInfoEnumFieldNode.TypeRef.TypeInfo = new EnumItemTypeInfo(CurrentScope,
+            typeInfoEnumFieldNode.Named.Name, parameters);
 
         return typeInfoEnumFieldNode;
     }
 
     public override TypeInfoEnumFieldParamNode VisitTypeInfoEnumFieldParamNode(
-        TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode)
+        TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode
+    )
     {
         VisitTypeInfoNode(typeInfoEnumFieldParamNode.TypeInfoNode);
 
         typeInfoEnumFieldParamNode.TypeRef = typeInfoEnumFieldParamNode.TypeInfoNode.TypeRef;
 
         return typeInfoEnumFieldParamNode;
+    }
+
+    public override ReferenceNamedNode VisitReferenceNameNode(ReferenceNamedNode referenceNamedNode)
+    {
+        if (TryLookupType(referenceNamedNode.Name, out var symbol))
+        {
+            referenceNamedNode.TypeRef = symbol.TypeRef;
+        }
+        else
+        {
+            throw new CompileError.SemanticError(
+                $"type {referenceNamedNode.Name} not found",
+                referenceNamedNode.NodeContext.PositionData
+            );
+        }
+
+        return base.VisitReferenceNameNode(referenceNamedNode);
     }
 }

@@ -8,4 +8,9 @@ public class InlineEnumTypeInfo(Dictionary<string, TypeRef> items) : TypeInfo
     {
         typeInfoVisitor.VisitInlineEnumTypeInfo(this);
     }
+
+    public override bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        return comparer.CompareInlineEnumTypeInfo(this, other);
+    }
 }

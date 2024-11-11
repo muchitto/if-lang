@@ -14,4 +14,9 @@ public class FunctionTypeInfo(TypeRef returnType, Dictionary<string, TypeRef> pa
     {
         visitor.VisitFunctionTypeInfo(this);
     }
+
+    public override bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        return comparer.CompareFunctionTypeInfo(this, other);
+    }
 }

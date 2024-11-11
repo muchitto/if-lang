@@ -12,7 +12,7 @@ public class Lexer(CompilationContext context)
 
     public static readonly string[] Keywords =
     [
-        "new", "def", "var", "enum", "in", "is", "if", "else", "while", "for", "in", "break", "continue", "return",
+        "new", "class", "func", "var", "enum", "in", "is", "if", "else", "while", "for", "in", "break", "continue", "return",
         "import", "from", "static", "true", "false", "null", "extend", "type", "extern"
     ];
 
@@ -22,8 +22,6 @@ public class Lexer(CompilationContext context)
     ];
 
     public static readonly string[] Symbols = ["{", "}", "(", ")", "[", "]", "@", "->", ".", ":", ",", "|", "?"];
-
-    private bool _lastTokenWasNewLine = true;
 
     private CompilationContext Context { get; } = context;
 
@@ -184,8 +182,6 @@ public class Lexer(CompilationContext context)
         {
             return new Token(TokenType.EndOfFile, PositionData.PositionDataSpan(1));
         }
-
-        _lastTokenWasNewLine = false;
 
         var startingPosition = PositionData;
 

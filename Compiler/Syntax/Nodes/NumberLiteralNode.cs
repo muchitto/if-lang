@@ -8,6 +8,11 @@ public class NumberLiteralNode(NodeContext nodeContext, string number) : Literal
 
     public override void Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitNumberNode(this);
+        nodeVisitor.VisitNumberLiteralNode(this);
+    }
+
+    public bool IsFloat()
+    {
+        return Number.Contains('.');
     }
 }

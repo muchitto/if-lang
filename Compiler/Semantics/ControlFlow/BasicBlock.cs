@@ -1,8 +1,10 @@
+using Compiler.Syntax;
+
 namespace Compiler.Semantics.ControlFlow;
 
-public class BasicBlock
+public class BasicBlock : ControlFlowNode
 {
-    public BasicBlock(List<ControlFlowNode> nodes)
+    public BasicBlock(NodeContext nodeContext, List<ControlFlowNode> nodes) : base(nodeContext)
     {
         Nodes = nodes;
     }

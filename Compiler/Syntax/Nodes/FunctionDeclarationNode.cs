@@ -1,15 +1,16 @@
+using Compiler.Syntax.Nodes.TypeInfoNodes;
 using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
 public class FunctionDeclarationNode(
     NodeContext nodeContext,
-    DeclarationNameNode name,
+    DeclarationNamedNode named,
     List<FunctionDeclarationParameterNode> parameterNodes,
     TypeInfoNode? returnTypeInfo,
     BodyBlockNode body,
     List<AnnotationNode> annotationNodes
-) : DeclarationNode(nodeContext, name, annotationNodes)
+) : DeclarationNode(nodeContext, named, annotationNodes)
 {
     public List<FunctionDeclarationParameterNode> ParameterNodes { get; } = parameterNodes;
     public TypeInfoNode? ReturnTypeInfo { get; } = returnTypeInfo;

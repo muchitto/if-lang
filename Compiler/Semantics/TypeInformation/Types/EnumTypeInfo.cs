@@ -1,18 +1,17 @@
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class EnumTypeInfo : TypeInfo
+public class EnumTypeInfo(Scope scope, string name, Dictionary<string, TypeRef> fields)
+    : AbstractStructuralTypeInfo(scope, fields)
 {
-    public EnumTypeInfo(string name, Dictionary<string, TypeRef> items)
-    {
-        Name = name;
-        Items = items;
-    }
-
-    public string Name { get; }
-    public Dictionary<string, TypeRef> Items { get; }
+    public string Name { get; } = name;
 
     public override void Accept(ITypeInfoVisitor typeInfoVisitor)
     {
         typeInfoVisitor.VisitEnumTypeInfo(this);
+    }
+
+    public override bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        return comparer.CompareEnumTypeInfo(this, other);
     }
 }

@@ -7,13 +7,14 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Semantics.TypeInference;
 
-public class InferenceVisitor : BaseNodeVisitor
+public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor(semanticContext)
 {
     public Stack<TypeInfo> TypeStack { get; } = new();
-    public List<CompileError> Errors { get; } = new();
+    public List<CompileError> Errors { get; } = [];
 
     public override VariableDeclarationNode VisitVariableDeclarationNode(
-        VariableDeclarationNode variableDeclarationNode)
+        VariableDeclarationNode variableDeclarationNode
+    )
     {
         if (variableDeclarationNode.Value == null)
         {
@@ -83,7 +84,8 @@ public class InferenceVisitor : BaseNodeVisitor
     }
 
     public override StructureLiteralFieldNode VisitStructureLiteralFieldNode(
-        StructureLiteralFieldNode structureLiteralFieldNode)
+        StructureLiteralFieldNode structureLiteralFieldNode
+    )
     {
         var currentType = TypeStack.Peek();
 

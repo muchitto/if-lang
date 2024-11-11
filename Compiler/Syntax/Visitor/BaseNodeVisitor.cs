@@ -1,4 +1,7 @@
+using System.Diagnostics;
+using Compiler.Semantics;
 using Compiler.Syntax.Nodes;
+using Compiler.Syntax.Nodes.TypeInfoNodes;
 
 namespace Compiler.Syntax.Visitor;
 
@@ -9,478 +12,465 @@ public class VisitorError : Exception
     }
 }
 
-public abstract class BaseNodeVisitor : INodeVisitor
+public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVisitor
 {
+    protected readonly SemanticContext SemanticContext = semanticContext;
+
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual BaseNode VisitBaseNode(BaseNode baseNode)
     {
-        return baseNode switch
-        {
-            TypeInfoNameNode typeInfoNameNode => VisitTypeNameNode(typeInfoNameNode),
-            ProgramNode programNode => VisitProgramNode(programNode),
-            BodyBlockNode bodyBlockNode => VisitBodyBlockNode(bodyBlockNode),
-            FunctionCallArgumentNode functionCallArgumentNode =>
-                VisitFunctionCallArgumentNode(functionCallArgumentNode),
-            MemberAccessNode memberAccessNode => VisitMemberAccessNode(memberAccessNode),
-            IdentifierNode identifierNode => VisitIdentifierNode(identifierNode),
-            FunctionCallNode functionCallNode => VisitFunctionCallNode(functionCallNode),
-            ExpressionNode expressionNode => VisitExpressionNode(expressionNode),
-            FunctionDeclarationParameterNode functionDeclarationParameterNode => VisitFunctionDeclarationParameterNode(
-                functionDeclarationParameterNode),
-            IfStatementNode ifStatementNode => VisitIfStatementNode(ifStatementNode),
-            AnnotationNode annotationNode => VisitAnnotationNode(annotationNode),
-            WhileStatementNode whileStatementNode => VisitWhileNode(whileStatementNode),
-            ForStatementNode forStatementNode => VisitForStatementNode(forStatementNode),
-            ReturnStatementNode returnStatementNode => VisitReturnStatementNode(returnStatementNode),
-            BreakStatementNode breakStatementNode => VisitBreakStatementNode(breakStatementNode),
-            ContinueStatementNode continueStatementNode => VisitContinueStatementNode(continueStatementNode),
-            DeclarationNode declarationNode => VisitDeclarationNode(declarationNode),
-            AssignmentNode assignmentNode => VisitAssignmentNode(assignmentNode),
-            LiteralNode literalNode => VisitLiteralNode(literalNode),
-            EnumShortHandNode enumShortHandNode => VisitEnumShortHandNode(enumShortHandNode),
-            UnaryExpressionNode unaryExpressionNode => VisitUnaryExpressionNode(unaryExpressionNode),
-            ArrayAccessNode arrayAccessNode => VisitArrayAccessNode(arrayAccessNode),
-
-            _ => throw new NotImplementedException()
-        };
+        baseNode.Accept(this);
+        return baseNode;
     }
 
-    public virtual DeclarationNode VisitDeclarationNode(DeclarationNode declarationNode)
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual ProgramNode VisitProgramNode(ProgramNode programNode)
     {
-        return declarationNode switch
-        {
-            VariableDeclarationNode variableDeclaration => VisitVariableDeclarationNode(variableDeclaration),
-            FunctionDeclarationNode functionDeclarationNode => VisitFunctionDeclarationNode(functionDeclarationNode),
-            ObjectDeclarationNode objectDeclarationNode => VisitObjectDeclarationNode(objectDeclarationNode),
-            EnumDeclarationNode enumDeclarationNode => VisitEnumDeclarationNode(enumDeclarationNode),
-            ObjectVariableOverride objectVariableOverride => VisitObjectVariableOverride(objectVariableOverride),
-            ExternNode externNode => VisitExternNode(externNode),
-            _ => throw new VisitorError("unhandled declaration node")
-        };
+        VisitNodes(programNode.Declarations);
+        return programNode;
     }
 
-    public virtual EnumShortHandNode VisitEnumShortHandNode(EnumShortHandNode enumShortHandNode)
-    {
-        enumShortHandNode.Name.Accept(this);
-
-        foreach (var parameter in enumShortHandNode.Parameters)
-        {
-            parameter.Accept(this);
-        }
-
-        return enumShortHandNode;
-    }
-
-    public virtual LiteralNode VisitLiteralNode(LiteralNode literalNode)
-    {
-        return literalNode switch
-        {
-            NumberLiteralNode numberLiteralNode => VisitNumberNode(numberLiteralNode),
-            BooleanLiteralNode booleanLiteralNode => VisitBooleanLiteralNode(booleanLiteralNode),
-            StringLiteralNode stringLiteralNode => VisitStringLiteralNode(stringLiteralNode),
-            StructureLiteralNode structureLiteralNode => VisitStructureLiteralNode(structureLiteralNode),
-            StructureLiteralFieldNode structureLiteralFieldNode => VisitStructureLiteralFieldNode(
-                structureLiteralFieldNode),
-            ArrayLiteralNode arrayLiteralNode => VisitArrayLiteralNode(arrayLiteralNode),
-            NullLiteralNode nullLiteralNode => nullLiteralNode,
-            _ => throw new VisitorError("unhandled literal node")
-        };
-    }
-
-    public virtual TypeInfoNode VisitTypeInfoNode(TypeInfoNode typeInfoNode)
-    {
-        return typeInfoNode switch
-        {
-            TypeInfoNameNode typeInfoNameNode => VisitTypeNameNode(typeInfoNameNode),
-            TypeInfoArrayNode typeInfoArrayNode => VisitTypeInfoArrayNode(typeInfoArrayNode),
-            TypeInfoStructureNode typeInfoStructureNode => VisitTypeInfoStructureNode(typeInfoStructureNode),
-            TypeInfoEnumNode typeInfoEnumNode => VisitTypeInfoEnumNode(typeInfoEnumNode),
-            TypeInfoEnumFieldNode typeInfoEnumFieldNode => VisitTypeInfoEnumFieldNode(typeInfoEnumFieldNode),
-            TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode => VisitTypeInfoEnumFieldParamNode(
-                typeInfoEnumFieldParamNode),
-            OptionalTypeInfoNode optionalTypeInfoNode => VisitOptionalTypeInfoNode(optionalTypeInfoNode),
-            _ => throw new VisitorError("unhandled type info node")
-        };
-    }
-
-    public virtual TypeInfoNameNode VisitTypeNameNode(TypeInfoNameNode typeInfoNameNode)
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual TypeInfoNameNode VisitTypeInfoNameNode(TypeInfoNameNode typeInfoNameNode)
     {
         return typeInfoNameNode;
     }
 
-    public virtual TypeInfoArrayNode VisitTypeInfoArrayNode(TypeInfoArrayNode typeInfoArrayNode)
-    {
-        typeInfoArrayNode.BaseType.Accept(this);
-
-        return typeInfoArrayNode;
-    }
-
-    public virtual TypeInfoStructureNode VisitTypeInfoStructureNode(TypeInfoStructureNode typeInfoStructureNode)
-    {
-        foreach (var field in typeInfoStructureNode.Fields)
-        {
-            field.Value.Accept(this);
-        }
-
-        return typeInfoStructureNode;
-    }
-
-    public virtual ArrayLiteralNode VisitArrayLiteralNode(ArrayLiteralNode arrayLiteralNode)
-    {
-        foreach (var value in arrayLiteralNode.Elements)
-        {
-            value.Accept(this);
-        }
-
-        return arrayLiteralNode;
-    }
-
-    public virtual StructureLiteralNode VisitStructureLiteralNode(StructureLiteralNode structureLiteralNode)
-    {
-        foreach (var field in structureLiteralNode.Fields)
-        {
-            field.Accept(this);
-        }
-
-        return structureLiteralNode;
-    }
-
-    public virtual ProgramNode VisitProgramNode(ProgramNode programNode)
-    {
-        foreach (var declaration in programNode.Declarations)
-        {
-            VisitDeclarationNode(declaration);
-        }
-
-        return programNode;
-    }
-
-
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual BodyBlockNode VisitBodyBlockNode(BodyBlockNode bodyBlockNode)
     {
-        foreach (var statement in bodyBlockNode.Statements)
-        {
-            statement.Accept(this);
-        }
-
+        VisitNodes(bodyBlockNode.Statements);
         return bodyBlockNode;
     }
 
-    public virtual NumberLiteralNode VisitNumberNode(NumberLiteralNode numberLiteralNode)
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual NumberLiteralNode VisitNumberLiteralNode(NumberLiteralNode numberLiteralNode)
     {
         return numberLiteralNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual FunctionCallArgumentNode VisitFunctionCallArgumentNode(
-        FunctionCallArgumentNode functionCallArgumentNode)
+        FunctionCallArgumentNode functionCallArgumentNode
+    )
     {
-        functionCallArgumentNode.Value.Accept(this);
-
+        VisitNode(functionCallArgumentNode.Value);
         return functionCallArgumentNode;
     }
 
-
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual VariableDeclarationNode VisitVariableDeclarationNode(VariableDeclarationNode variableDeclarationNode)
     {
-        variableDeclarationNode.Name.Accept(this);
-        variableDeclarationNode.Value?.Accept(this);
-        variableDeclarationNode.TypeInfo?.Accept(this);
-
-        foreach (var annotation in variableDeclarationNode.Annotations)
-        {
-            annotation.Accept(this);
-        }
-
+        VisitNode(variableDeclarationNode.Named);
+        VisitNode(variableDeclarationNode.Value);
+        VisitNode(variableDeclarationNode.TypeInfo);
+        VisitNodes(variableDeclarationNode.Annotations);
         return variableDeclarationNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual IdentifierNode VisitIdentifierNode(IdentifierNode identifierNode)
     {
         return identifierNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual FunctionDeclarationNode VisitFunctionDeclarationNode(FunctionDeclarationNode functionDeclarationNode)
     {
-        functionDeclarationNode.Name.Accept(this);
-
-        foreach (var annotation in functionDeclarationNode.Annotations)
-        {
-            annotation.Accept(this);
-        }
-
-        foreach (var functionDeclarationParameterNode in functionDeclarationNode.ParameterNodes)
-        {
-            functionDeclarationParameterNode.TypeInfoNode.Accept(this);
-        }
-
-        functionDeclarationNode.Body.Accept(this);
-
-        functionDeclarationNode.ReturnTypeInfo?.Accept(this);
-
+        VisitNode(functionDeclarationNode.Named);
+        VisitNodes(functionDeclarationNode.Annotations);
+        VisitNodes(functionDeclarationNode.ParameterNodes);
+        VisitNode(functionDeclarationNode.Body);
+        VisitNode(functionDeclarationNode.ReturnTypeInfo);
         return functionDeclarationNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual FunctionCallNode VisitFunctionCallNode(FunctionCallNode functionCallNode)
     {
-        functionCallNode.Name.Accept(this);
-
-        foreach (var argument in functionCallNode.Arguments)
-        {
-            argument.Accept(this);
-        }
-
+        VisitNodes(functionCallNode.Arguments);
         return functionCallNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual ExpressionNode VisitExpressionNode(ExpressionNode expressionNode)
     {
-        expressionNode.Left.Accept(this);
-        expressionNode.Right.Accept(this);
-
+        VisitNode(expressionNode.Left);
+        VisitNode(expressionNode.Right);
         return expressionNode;
     }
 
-    public virtual ObjectDeclarationNode VisitObjectDeclarationNode(
-        ObjectDeclarationNode objectDeclarationNode)
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode)
     {
-        objectDeclarationNode.Name.Accept(this);
-        objectDeclarationNode.BaseName?.Accept(this);
-
-        foreach (var annotation in objectDeclarationNode.Annotations)
-        {
-            annotation.Accept(this);
-        }
-
-        foreach (var field in objectDeclarationNode.Fields)
-        {
-            field.Accept(this);
-        }
-
-
+        VisitNode(objectDeclarationNode.Named);
+        VisitNode(objectDeclarationNode.BaseName);
+        VisitNodes(objectDeclarationNode.Annotations);
+        VisitNodes(objectDeclarationNode.Fields);
         return objectDeclarationNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual FunctionDeclarationParameterNode VisitFunctionDeclarationParameterNode(
-        FunctionDeclarationParameterNode functionDeclarationParameterNode)
+        FunctionDeclarationParameterNode functionDeclarationParameterNode
+    )
     {
-        functionDeclarationParameterNode.Name.Accept(this);
-        functionDeclarationParameterNode.TypeInfoNode.Accept(this);
-
+        VisitNode(functionDeclarationParameterNode.Named);
+        VisitNode(functionDeclarationParameterNode.TypeInfoNode);
         return functionDeclarationParameterNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual BooleanLiteralNode VisitBooleanLiteralNode(BooleanLiteralNode booleanLiteralNode)
     {
         return booleanLiteralNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual IfStatementNode VisitIfStatementNode(IfStatementNode ifStatementNode)
     {
-        ifStatementNode.Expression?.Accept(this);
-        ifStatementNode.Body.Accept(this);
-        ifStatementNode.NextIf?.Accept(this);
-
+        VisitNode(ifStatementNode.Expression);
+        VisitNode(ifStatementNode.Body);
+        VisitNode(ifStatementNode.NextIf);
         return ifStatementNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual StringLiteralNode VisitStringLiteralNode(StringLiteralNode stringLiteralNode)
     {
         return stringLiteralNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual AnnotationNode VisitAnnotationNode(AnnotationNode annotationNode)
     {
         return annotationNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual WhileStatementNode VisitWhileNode(WhileStatementNode whileStatementNode)
     {
-        whileStatementNode.Expression.Accept(this);
-
-        whileStatementNode.Body.Accept(this);
-
+        VisitNode(whileStatementNode.Expression);
+        VisitNode(whileStatementNode.Body);
         return whileStatementNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual ForStatementNode VisitForStatementNode(ForStatementNode forStatementNode)
     {
-        forStatementNode.Iteratable.Accept(this);
-        forStatementNode.Value.Accept(this);
-        forStatementNode.Body.Accept(this);
-
+        VisitNode(forStatementNode.Iteratable);
+        VisitNode(forStatementNode.Value);
+        VisitNode(forStatementNode.Body);
         return forStatementNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual ReturnStatementNode VisitReturnStatementNode(ReturnStatementNode returnStatementNode)
     {
-        returnStatementNode.Value?.Accept(this);
-
+        VisitNode(returnStatementNode.Value);
         return returnStatementNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual BreakStatementNode VisitBreakStatementNode(BreakStatementNode breakStatementNode)
     {
         return breakStatementNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual ContinueStatementNode VisitContinueStatementNode(ContinueStatementNode continueStatementNode)
     {
         return continueStatementNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual DeclarationNode VisitDeclarationNode(DeclarationNode declarationNode)
+    {
+        VisitNode(declarationNode);
+        return declarationNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual TypeInfoNode VisitTypeInfoNode(TypeInfoNode typeInfoNode)
+    {
+        VisitNode(typeInfoNode);
+        return typeInfoNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual AssignmentNode VisitAssignmentNode(AssignmentNode assignmentNode)
     {
-        assignmentNode.Name.Accept(this);
-        assignmentNode.Value.Accept(this);
-
+        VisitNode(assignmentNode.Name);
+        VisitNode(assignmentNode.Value);
         return assignmentNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual MemberAccessNode VisitMemberAccessNode(MemberAccessNode memberAccessNode)
     {
-        memberAccessNode.BaseObject.Accept(this);
-        memberAccessNode.Member.Accept(this);
-
+        VisitNode(memberAccessNode.BaseObject);
+        VisitNode(memberAccessNode.Member);
         return memberAccessNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual TypeInfoArrayNode VisitTypeInfoArrayNode(TypeInfoArrayNode typeInfoArrayNode)
+    {
+        VisitNode(typeInfoArrayNode.BaseType);
+        return typeInfoArrayNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual TypeInfoStructureNode VisitTypeInfoStructureNode(TypeInfoStructureNode typeInfoStructureNode)
+    {
+        VisitNodes(typeInfoStructureNode.Fields.Values);
+        return typeInfoStructureNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual StructureLiteralNode VisitStructureLiteralNode(StructureLiteralNode structureLiteralNode)
+    {
+        VisitNodes(structureLiteralNode.Fields);
+        return structureLiteralNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual ArrayLiteralNode VisitArrayLiteralNode(ArrayLiteralNode arrayLiteralNode)
+    {
+        VisitNodes(arrayLiteralNode.Elements);
+        return arrayLiteralNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual EnumDeclarationNode VisitEnumDeclarationNode(EnumDeclarationNode enumDeclarationNode)
     {
-        foreach (var annotation in enumDeclarationNode.Annotations)
-        {
-            annotation.Accept(this);
-        }
-
-        foreach (var item in enumDeclarationNode.Items)
-        {
-            item.Accept(this);
-        }
-
+        VisitNodes(enumDeclarationNode.Annotations);
+        VisitNodes(enumDeclarationNode.Items);
         return enumDeclarationNode;
     }
 
-    public virtual StructureLiteralFieldNode VisitStructureLiteralFieldNode(
-        StructureLiteralFieldNode structureLiteralFieldNode)
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual LiteralNode VisitLiteralNode(LiteralNode literalNode)
     {
-        structureLiteralFieldNode.Name.Accept(this);
-        structureLiteralFieldNode.Field.Accept(this);
+        VisitNode(literalNode);
+        return literalNode;
+    }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual StructureLiteralFieldNode VisitStructureLiteralFieldNode(
+        StructureLiteralFieldNode structureLiteralFieldNode
+    )
+    {
+        VisitNode(structureLiteralFieldNode.Name);
+        VisitNode(structureLiteralFieldNode.Field);
         return structureLiteralFieldNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual EnumShortHandNode VisitEnumShortHandNode(EnumShortHandNode enumShortHandNode)
+    {
+        VisitNode(enumShortHandNode.Named);
+        VisitNodes(enumShortHandNode.Parameters);
+        return enumShortHandNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual ObjectVariableOverride VisitObjectVariableOverride(ObjectVariableOverride objectVariableOverride)
     {
-        objectVariableOverride.Name.Accept(this);
-        objectVariableOverride.Value.Accept(this);
-
+        VisitNode(objectVariableOverride.Named);
+        VisitNode(objectVariableOverride.Value);
         return objectVariableOverride;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual UnaryExpressionNode VisitUnaryExpressionNode(UnaryExpressionNode unaryExpressionNode)
     {
-        unaryExpressionNode.Value.Accept(this);
-
+        VisitNode(unaryExpressionNode.Value);
         return unaryExpressionNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual ExternNode VisitExternNode(ExternNode externNode)
     {
-        return externNode switch
-        {
-            ExternFunctionNode externFunctionNode => VisitExternFunctionNode(externFunctionNode),
-            ExternVariableNode externVariableNode => VisitExternVariableNode(externVariableNode),
-            _ => throw new VisitorError("unhandled extern node")
-        };
+        VisitNode(externNode);
+        return externNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual ExternFunctionNode VisitExternFunctionNode(ExternFunctionNode externFunctionNode)
     {
-        externFunctionNode.Name.Accept(this);
-        foreach (var argument in externFunctionNode.ParameterNodes)
-        {
-            argument.Accept(this);
-        }
-
-        externFunctionNode.ReturnType?.Accept(this);
-
+        VisitNode(externFunctionNode.Named);
+        VisitNodes(externFunctionNode.ParameterNodes);
+        VisitNode(externFunctionNode.ReturnType);
         return externFunctionNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual ExternVariableNode VisitExternVariableNode(ExternVariableNode externVariableNode)
     {
-        externVariableNode.Name.Accept(this);
-        externVariableNode.TypeInfoNode.Accept(this);
-
+        VisitNode(externVariableNode.Named);
+        VisitNode(externVariableNode.TypeInfoNode);
         return externVariableNode;
     }
 
-    public virtual EnumDeclarationItemNode VisitEnumDeclarationItemNode(EnumDeclarationItemNode enumDeclarationItemNode)
-    {
-        enumDeclarationItemNode.Name.Accept(this);
-        foreach (var parameter in enumDeclarationItemNode.ParameterNodes)
-        {
-            parameter.Accept(this);
-        }
-
-        return enumDeclarationItemNode;
-    }
-
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual EnumDeclarationItemParameterNode VisitEnumDeclarationItemParameterNode(
-        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode)
+        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode
+    )
     {
-        enumDeclarationItemParameterNode.Name.Accept(this);
-        enumDeclarationItemParameterNode.TypeInfoNode.Accept(this);
-
+        VisitNode(enumDeclarationItemParameterNode.Named);
+        VisitNode(enumDeclarationItemParameterNode.TypeInfoNode);
         return enumDeclarationItemParameterNode;
     }
 
-    public virtual TypeInfoEnumNode VisitTypeInfoEnumNode(TypeInfoEnumNode typeInfoEnumNode)
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual EnumDeclarationItemNode VisitEnumDeclarationItemNode(EnumDeclarationItemNode enumDeclarationItemNode)
     {
-        foreach (var field in typeInfoEnumNode.Fields)
-        {
-            field.Accept(this);
-        }
-
-        return typeInfoEnumNode;
+        VisitNode(enumDeclarationItemNode.Named);
+        VisitNodes(enumDeclarationItemNode.ParameterNodes);
+        return enumDeclarationItemNode;
     }
 
-    public virtual TypeInfoEnumFieldParamNode VisitTypeInfoEnumFieldParamNode(
-        TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode)
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual TypeInfoAnonymousEnumNode VisitTypeInfoAnonymousEnumNode(
+        TypeInfoAnonymousEnumNode typeInfoAnonymousEnumNode
+    )
     {
-        typeInfoEnumFieldParamNode.Name.Accept(this);
-        typeInfoEnumFieldParamNode.TypeInfoNode.Accept(this);
+        VisitNodes(typeInfoAnonymousEnumNode.Fields);
+        return typeInfoAnonymousEnumNode;
+    }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual TypeInfoEnumFieldParamNode VisitTypeInfoEnumFieldParamNode(
+        TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode
+    )
+    {
+        VisitNode(typeInfoEnumFieldParamNode.Named);
+        VisitNode(typeInfoEnumFieldParamNode.TypeInfoNode);
         return typeInfoEnumFieldParamNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual TypeInfoEnumFieldNode VisitTypeInfoEnumFieldNode(TypeInfoEnumFieldNode typeInfoEnumFieldNode)
     {
-        typeInfoEnumFieldNode.Name.Accept(this);
-
-        foreach (var parameter in typeInfoEnumFieldNode.Parameters)
-        {
-            parameter.Accept(this);
-        }
-
+        VisitNode(typeInfoEnumFieldNode.Named);
+        VisitNodes(typeInfoEnumFieldNode.Parameters);
         return typeInfoEnumFieldNode;
     }
 
-    public virtual DeclarationNameNode VisitDeclarationNameNode(DeclarationNameNode declarationNameNode)
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual DeclarationNamedNode VisitDeclarationNameNode(DeclarationNamedNode declarationNamedNode)
     {
-        return declarationNameNode;
+        VisitNameNode(declarationNamedNode);
+        return declarationNamedNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual ArrayAccessNode VisitArrayAccessNode(ArrayAccessNode arrayAccessNode)
     {
-        arrayAccessNode.Array.Accept(this);
-        arrayAccessNode.Accessor.Accept(this);
-
+        VisitNode(arrayAccessNode.Array);
+        VisitNode(arrayAccessNode.Accessor);
         return arrayAccessNode;
     }
 
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual OptionalTypeInfoNode VisitOptionalTypeInfoNode(OptionalTypeInfoNode optionalTypeInfoNode)
     {
-        optionalTypeInfoNode.TypeInfo.Accept(this);
-
+        VisitNode(optionalTypeInfoNode.TypeInfo);
         return optionalTypeInfoNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual ReferenceNamedNode VisitReferenceNameNode(ReferenceNamedNode referenceNamedNode)
+    {
+        VisitNameNode(referenceNamedNode);
+        return referenceNamedNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual NamedNode VisitNameNode(NamedNode namedNode)
+    {
+        VisitNodes(namedNode.GenericParameters);
+        return namedNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual NullLiteralNode VisitNullLiteralNode(NullLiteralNode nullLiteralNode)
+    {
+        return nullLiteralNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual IdentifiableNode VisitIdentifiableNode(IdentifiableNode identifiableNode)
+    {
+        return identifiableNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    protected void VisitNode(BaseNode? node)
+    {
+        node?.Accept(this);
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    protected void VisitNodes(IEnumerable<BaseNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            node.Accept(this);
+        }
     }
 }

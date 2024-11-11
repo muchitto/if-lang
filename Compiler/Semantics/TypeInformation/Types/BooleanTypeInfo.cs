@@ -1,6 +1,6 @@
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class BooleanTypeInfo : TypeInfo
+public class BooleanTypeInfo : FoundationalTypeInfo
 {
     public override string ToString()
     {
@@ -10,5 +10,10 @@ public class BooleanTypeInfo : TypeInfo
     public override void Accept(ITypeInfoVisitor visitor)
     {
         visitor.VisitBooleanTypeInfo(this);
+    }
+
+    public override bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        return comparer.CompareBooleanTypeInfo(this, other);
     }
 }

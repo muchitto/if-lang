@@ -5,28 +5,19 @@ using Compiler.Syntax.Nodes;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, SemanticHandler semanticHandler)
-    : SemanticPassBaseNodeVisitor(semanticContext, semanticHandler)
+public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext)
+    : SemanticPassBaseNodeVisitor(semanticContext)
 {
     public override ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode)
     {
-        if (objectDeclarationNode.IsImmediatelyInstanced)
-        {
-            SemanticHandler.SetSymbol(
-                new Symbol(
-                    objectDeclarationNode.Name.Name,
-                    SemanticHandler.CurrentScope,
-                    objectDeclarationNode,
-                    SymbolType.Identifier
-                ),
-                true
-            );
-        }
+        AddObjectDeclarationNode(objectDeclarationNode);
+
+        var objectScope = NewScope(ScopeType.Object, objectDeclarationNode);
 
         var baseTypeRef = TypeInfo.ObjectRef;
         if (objectDeclarationNode.BaseName != null)
         {
-            if (SemanticHandler.TryLookupType(objectDeclarationNode.BaseName.Name, out var symbol))
+            if (TryLookupType(objectDeclarationNode.BaseName.Name, out var symbol))
             {
                 baseTypeRef = symbol.TypeRef;
             }
@@ -38,40 +29,39 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
             objectDeclarationNode.BaseName.TypeRef = baseTypeRef;
         }
 
-        var objectScope = SemanticHandler.NewScope(ScopeType.Object, objectDeclarationNode);
+        var name = objectDeclarationNode.Named.Name;
 
-        var name = objectDeclarationNode.Name.Name;
-
-        objectDeclarationNode.Name.TypeRef = new TypeRef(TypeInfo.Unknown);
+        objectDeclarationNode.Named.TypeRef = new TypeRef(TypeInfo.Unknown);
 
         var fields = new Dictionary<string, TypeRef>();
         objectDeclarationNode.TypeRef.TypeInfo =
-            new ObjectTypeInfo(baseTypeRef, name, fields, objectScope);
+            new ObjectTypeInfo(objectScope, baseTypeRef, name, fields);
 
-        foreach (var declaration in objectDeclarationNode.Fields)
+        foreach (var variableDeclaration in objectDeclarationNode.Fields.OfType<VariableDeclarationNode>())
         {
-            VisitDeclarationNode(declaration);
+            VisitVariableDeclarationNode(variableDeclaration);
 
-            fields.Add(declaration.Name.Name, declaration.TypeRef);
+            fields.Add(variableDeclaration.Named.Name, variableDeclaration.TypeRef);
         }
 
-        SemanticHandler.PopScope();
 
-        SemanticHandler.SetSymbol(
-            new Symbol(
-                objectDeclarationNode.Name.Name,
-                objectScope,
-                objectDeclarationNode,
-                SymbolType.Type
-            ),
-            true
-        );
+        foreach (var functionDeclaration in objectDeclarationNode.Fields.OfType<FunctionDeclarationNode>())
+        {
+            VisitFunctionDeclarationNode(functionDeclaration);
+
+            fields.Add(functionDeclaration.Named.Name, functionDeclaration.TypeRef);
+        }
+
+        PopScope();
+
+        PopObjectDeclarationNode();
 
         return objectDeclarationNode;
     }
 
     public override FunctionDeclarationParameterNode VisitFunctionDeclarationParameterNode(
-        FunctionDeclarationParameterNode functionDeclarationParameterNode)
+        FunctionDeclarationParameterNode functionDeclarationParameterNode
+    )
     {
         base.VisitFunctionDeclarationParameterNode(functionDeclarationParameterNode);
 
@@ -80,31 +70,11 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
         return functionDeclarationParameterNode;
     }
 
-    public override TypeInfoNameNode VisitTypeNameNode(TypeInfoNameNode typeInfoNameNode)
-    {
-        TypeRef typeRef = new(TypeInfo.Unknown);
-
-        if (TypeInfo.TryGetBuiltInType(typeInfoNameNode.Name, out var typeInfo))
-        {
-            typeRef = new TypeRef(typeInfo);
-        }
-        else
-        {
-            if (SemanticHandler.TryLookupType(typeInfoNameNode.Name, out var symbol))
-            {
-                typeRef = symbol.TypeRef;
-            }
-        }
-
-        typeInfoNameNode.TypeRef = typeRef;
-
-        return typeInfoNameNode;
-    }
-
     public override VariableDeclarationNode VisitVariableDeclarationNode(
-        VariableDeclarationNode variableDeclarationNode)
+        VariableDeclarationNode variableDeclarationNode
+    )
     {
-        var name = variableDeclarationNode.Name.Name;
+        var name = variableDeclarationNode.Named.Name;
 
         if (variableDeclarationNode.TypeInfo != null)
         {
@@ -118,8 +88,8 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
             VisitBaseNode(variableDeclarationNode.Value);
         }
 
-        SemanticHandler.SetSymbol(
-            new Symbol(name, SemanticHandler.CurrentScope, variableDeclarationNode, SymbolType.Identifier),
+        SetSymbol(
+            new Symbol(name, CurrentScope, variableDeclarationNode, SymbolType.Identifier),
             true
         );
 
@@ -127,28 +97,34 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
     }
 
     public override FunctionDeclarationNode VisitFunctionDeclarationNode(
-        FunctionDeclarationNode functionDeclarationNode)
+        FunctionDeclarationNode functionDeclarationNode
+    )
     {
-        SemanticHandler.NewScope(ScopeType.Function, functionDeclarationNode);
+        NewScope(ScopeType.Function, functionDeclarationNode);
 
-        var name = functionDeclarationNode.Name.Name;
+        var name = functionDeclarationNode.Named.Name;
 
         var parameters = new Dictionary<string, TypeRef>();
         foreach (var parameter in functionDeclarationNode.ParameterNodes)
         {
-            var parameterName = parameter.Name.Name;
+            var parameterName = parameter.Named.Name;
             var parameterTypeRef = VisitTypeInfoNode(parameter.TypeInfoNode).TypeRef;
 
             parameter.TypeRef = parameterTypeRef;
             parameters.Add(parameterName, parameterTypeRef);
 
-            SemanticHandler.SetSymbol(
-                new Symbol(parameterName, SemanticHandler.CurrentScope, parameter, SymbolType.Identifier),
+            SetSymbol(
+                new Symbol(
+                    parameterName,
+                    CurrentScope,
+                    parameter,
+                    SymbolType.Identifier
+                ),
                 true
             );
         }
 
-        SemanticHandler.PopScope();
+        PopScope();
 
         var returnTypeRef = new TypeRef(TypeInfo.Void);
 
@@ -163,8 +139,8 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
 
         functionDeclarationNode.TypeRef.TypeInfo = functionTypeInfo;
 
-        SemanticHandler.SetSymbol(
-            new Symbol(name, SemanticHandler.CurrentScope, functionDeclarationNode, SymbolType.Identifier),
+        SetSymbol(
+            new Symbol(name, CurrentScope, functionDeclarationNode, SymbolType.Identifier),
             true
         );
 
@@ -173,18 +149,47 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
 
     public override ProgramNode VisitProgramNode(ProgramNode programNode)
     {
-        SemanticHandler.NewScope(ScopeType.Program, programNode);
+        NewScope(ScopeType.Program, programNode);
+
+        foreach (var declaration in programNode.Declarations)
+        {
+            if (declaration is ObjectDeclarationNode objectDeclarationNode)
+            {
+                if (objectDeclarationNode.IsImmediatelyInstanced)
+                {
+                    SetSymbol(
+                        new Symbol(
+                            objectDeclarationNode.Named.Name,
+                            CurrentScope,
+                            objectDeclarationNode,
+                            SymbolType.Identifier
+                        ),
+                        true
+                    );
+                }
+
+                SetSymbol(
+                    new Symbol(
+                        objectDeclarationNode.Named.Name,
+                        CurrentScope,
+                        objectDeclarationNode,
+                        SymbolType.Type
+                    ),
+                    true
+                );
+            }
+        }
 
         base.VisitProgramNode(programNode);
 
-        SemanticHandler.PopScope();
+        PopScope();
 
         return programNode;
     }
 
     public override ExternFunctionNode VisitExternFunctionNode(ExternFunctionNode externFunctionNode)
     {
-        var name = externFunctionNode.Name.Name;
+        var name = externFunctionNode.Named.Name;
 
         var parameters = new Dictionary<string, TypeRef>();
 
@@ -192,18 +197,9 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
         {
             VisitFunctionDeclarationParameterNode(parameter);
 
-            var parameterName = parameter.Name.Name;
+            var parameterName = parameter.Named.Name;
             var parameterTypeRef = parameter.TypeRef;
 
-            if (parameterTypeRef.Compare(TypeInfo.Unknown))
-            {
-                throw new CompileError.SemanticError(
-                    "extern function or variable types cannot be unknown at the time of declaration",
-                    parameter.TypeInfoNode.NodeContext.PositionData
-                );
-            }
-
-            parameter.TypeRef = parameterTypeRef;
             parameters.Add(parameterName, parameterTypeRef);
         }
 
@@ -220,8 +216,8 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
 
         externFunctionNode.TypeRef.TypeInfo = functionTypeInfo;
 
-        SemanticHandler.SetSymbol(
-            new Symbol(name, SemanticHandler.CurrentScope, externFunctionNode, SymbolType.Identifier),
+        SetSymbol(
+            new Symbol(name, CurrentScope, externFunctionNode, SymbolType.Identifier),
             true
         );
 
@@ -230,26 +226,31 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
 
     public override EnumDeclarationNode VisitEnumDeclarationNode(EnumDeclarationNode enumDeclarationNode)
     {
-        SemanticHandler.NewScope(ScopeType.Enum, enumDeclarationNode);
+        var enumScope = NewScope(ScopeType.Enum, enumDeclarationNode);
 
-        var name = enumDeclarationNode.Name.Name;
+        var name = enumDeclarationNode.Named.Name;
 
         var items = new Dictionary<string, TypeRef>();
         foreach (var item in enumDeclarationNode.Items)
         {
             item.Accept(this);
 
-            items.Add(item.Name.Name, item.TypeRef);
+            items.Add(item.Named.Name, item.TypeRef);
         }
 
-        SemanticHandler.PopScope();
+        PopScope();
 
-        SemanticHandler.SetSymbol(
-            new Symbol(name, SemanticHandler.CurrentScope, enumDeclarationNode, SymbolType.Type),
+        SetSymbol(
+            new Symbol(
+                name,
+                CurrentScope,
+                enumDeclarationNode,
+                SymbolType.Type
+            ),
             true
         );
 
-        enumDeclarationNode.TypeRef.TypeInfo = new EnumTypeInfo(name, items);
+        enumDeclarationNode.TypeRef.TypeInfo = new EnumTypeInfo(enumScope, name, items);
 
         return enumDeclarationNode;
     }
@@ -261,13 +262,14 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
         {
             VisitEnumDeclarationItemParameterNode(parameter);
 
-            parameters.Add(parameter.Name.Name, parameter.TypeRef);
+            parameters.Add(parameter.Named.Name, parameter.TypeRef);
         }
 
-        enumItemNode.TypeRef.TypeInfo = new EnumItemTypeInfo(enumItemNode.Name.Name, parameters);
+        enumItemNode.TypeRef.TypeInfo =
+            new EnumItemTypeInfo(CurrentScope, enumItemNode.Named.Name, parameters);
 
-        SemanticHandler.SetSymbol(
-            new Symbol(enumItemNode.Name.Name, SemanticHandler.CurrentScope, enumItemNode, SymbolType.Type),
+        SetSymbol(
+            new Symbol(enumItemNode.Named.Name, CurrentScope, enumItemNode, SymbolType.Type),
             true
         );
 
@@ -275,19 +277,20 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
     }
 
     public override EnumDeclarationItemParameterNode VisitEnumDeclarationItemParameterNode(
-        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode)
+        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode
+    )
     {
         enumDeclarationItemParameterNode.TypeInfoNode.Accept(this);
 
         enumDeclarationItemParameterNode.TypeRef = enumDeclarationItemParameterNode.TypeInfoNode.TypeRef;
-        enumDeclarationItemParameterNode.Name.TypeRef = enumDeclarationItemParameterNode.TypeRef;
+        enumDeclarationItemParameterNode.Named.TypeRef = enumDeclarationItemParameterNode.TypeRef;
 
         return enumDeclarationItemParameterNode;
     }
 
     public override ExternVariableNode VisitExternVariableNode(ExternVariableNode externVariableNode)
     {
-        var name = externVariableNode.Name.Name;
+        var name = externVariableNode.Named.Name;
 
         VisitTypeInfoNode(externVariableNode.TypeInfoNode);
 
@@ -301,8 +304,8 @@ public class CollectDeclarationsNodeVisitor(SemanticContext semanticContext, Sem
 
         externVariableNode.TypeRef = externVariableNode.TypeInfoNode.TypeRef;
 
-        SemanticHandler.SetSymbol(
-            new Symbol(name, SemanticHandler.CurrentScope, externVariableNode, SymbolType.Identifier),
+        SetSymbol(
+            new Symbol(name, CurrentScope, externVariableNode, SymbolType.Identifier),
             true
         );
 

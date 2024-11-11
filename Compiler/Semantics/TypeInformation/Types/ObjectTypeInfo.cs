@@ -1,12 +1,15 @@
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class ObjectTypeInfo(TypeRef? baseClass, string name, Dictionary<string, TypeRef> fields, Scope scope) : TypeInfo
+public class ObjectTypeInfo(
+    Scope scope,
+    TypeRef? baseClass,
+    string name,
+    Dictionary<string, TypeRef> fields
+)
+    : AbstractStructuralTypeInfo(scope, fields)
 {
     public TypeRef? BaseClass { get; } = baseClass;
     public string Name { get; } = name;
-    public Dictionary<string, TypeRef> Fields { get; } = fields;
-
-    public Scope? Scope { get; } = scope;
 
     public override string ToString()
     {
@@ -31,5 +34,10 @@ public class ObjectTypeInfo(TypeRef? baseClass, string name, Dictionary<string, 
     public bool IsParentOf(ObjectTypeInfo typeInfo)
     {
         return typeInfo.IsChildOf(this);
+    }
+
+    public override bool Compare(ITypeComparer comparer, TypeInfo other)
+    {
+        return comparer.CompareObjectTypeInfo(this, other);
     }
 }

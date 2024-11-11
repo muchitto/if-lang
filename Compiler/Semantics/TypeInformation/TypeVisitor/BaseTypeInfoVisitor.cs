@@ -1,23 +1,15 @@
+using System.Diagnostics;
 using Compiler.Semantics.TypeInformation.Types;
 
 namespace Compiler.Semantics.TypeInformation.TypeVisitor;
 
 public class BaseTypeInfoVisitor : ITypeInfoVisitor
 {
-    private readonly List<TypeRef> _visitedTypes = [];
+    private readonly HashSet<TypeRef> _visitedTypes = [];
 
     public virtual ObjectTypeInfo VisitObjectTypeInfo(ObjectTypeInfo objectTypeInfo)
     {
-        foreach (var (key, value) in objectTypeInfo.Fields)
-        {
-            if (IsVisitedAndMark(value))
-            {
-                continue;
-            }
-
-            value.TypeInfo.Accept(this);
-        }
-
+        VisitTypeRefs(objectTypeInfo.Fields.Values);
         return objectTypeInfo;
     }
 
@@ -33,31 +25,13 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
 
     public virtual StructureTypeInfo VisitStructureTypeInfo(StructureTypeInfo structureTypeInfo)
     {
-        foreach (var (key, value) in structureTypeInfo.Fields)
-        {
-            if (IsVisitedAndMark(value))
-            {
-                continue;
-            }
-
-            value.TypeInfo.Accept(this);
-        }
-
+        VisitTypeRefs(structureTypeInfo.Fields.Values);
         return structureTypeInfo;
     }
 
     public virtual GenericTypeInfo VisitGenericTypeInfo(GenericTypeInfo genericTypeInfo)
     {
-        foreach (var genericParam in genericTypeInfo.GenericParams)
-        {
-            if (IsVisitedAndMark(genericParam))
-            {
-                continue;
-            }
-
-            genericParam.TypeInfo.Accept(this);
-        }
-
+        VisitTypeRefs(genericTypeInfo.GenericParams);
         return genericTypeInfo;
     }
 
@@ -98,79 +72,89 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
             EnumTypeInfo enumTypeInfo => VisitEnumTypeInfo(enumTypeInfo),
             InlineEnumTypeInfo inlineEnumTypeInfo => VisitInlineEnumTypeInfo(inlineEnumTypeInfo),
             EnumItemTypeInfo enumItemTypeInfo => VisitEnumItemTypeInfo(enumItemTypeInfo),
+            AnonymousEnumTypeInfo anonymousEnumTypeInfo => VisitAnonymousEnumTypeInfo(anonymousEnumTypeInfo),
             _ => throw new NotImplementedException()
         };
     }
 
     public virtual FunctionTypeInfo VisitFunctionTypeInfo(FunctionTypeInfo functionTypeInfo)
     {
-        functionTypeInfo.ReturnType.TypeInfo.Accept(this);
-        foreach (var (key, value) in functionTypeInfo.Parameters)
-        {
-            if (IsVisitedAndMark(value))
-            {
-                continue;
-            }
-
-            value.TypeInfo.Accept(this);
-        }
-
+        VisitTypeRef(functionTypeInfo.ReturnType);
+        VisitTypeRefs(functionTypeInfo.Parameters.Values);
         return functionTypeInfo;
     }
 
     public virtual EnumTypeInfo VisitEnumTypeInfo(EnumTypeInfo enumTypeInfo)
     {
-        foreach (var value in enumTypeInfo.Items.Values)
-        {
-            if (IsVisitedAndMark(value))
-            {
-                continue;
-            }
-
-            value.TypeInfo.Accept(this);
-        }
-
         return enumTypeInfo;
     }
 
     public virtual InlineEnumTypeInfo VisitInlineEnumTypeInfo(InlineEnumTypeInfo inlineEnumTypeInfo)
     {
-        foreach (var (key, value) in inlineEnumTypeInfo.Items)
-        {
-            if (IsVisitedAndMark(value))
-            {
-                continue;
-            }
-
-            value.TypeInfo.Accept(this);
-        }
-
+        VisitTypeRefs(inlineEnumTypeInfo.Items.Values);
         return inlineEnumTypeInfo;
     }
 
     public virtual EnumItemTypeInfo VisitEnumItemTypeInfo(EnumItemTypeInfo enumItemTypeInfo)
     {
-        foreach (var parameter in enumItemTypeInfo.Parameters.Values)
-        {
-            if (IsVisitedAndMark(parameter))
-            {
-                continue;
-            }
-
-            parameter.TypeInfo.Accept(this);
-        }
-
+        VisitTypeRefs(enumItemTypeInfo.Parameters.Values);
         return enumItemTypeInfo;
     }
 
+    public virtual AbstractStructuralTypeInfo VisitAbstractStructuralTypeInfo(
+        AbstractStructuralTypeInfo abstractStructuralTypeInfo)
+    {
+        return abstractStructuralTypeInfo switch
+        {
+            EnumTypeInfo enumTypeInfo => VisitEnumTypeInfo(enumTypeInfo),
+            ObjectTypeInfo objectTypeInfo => VisitObjectTypeInfo(objectTypeInfo),
+            StructureTypeInfo structureTypeInfo => VisitStructureTypeInfo(structureTypeInfo),
+            _ => abstractStructuralTypeInfo
+        };
+    }
+
+    public virtual AnonymousEnumTypeInfo VisitAnonymousEnumTypeInfo(AnonymousEnumTypeInfo anonymousEnumTypeInfo)
+    {
+        VisitTypeRefs(anonymousEnumTypeInfo.Fields.Values);
+        return anonymousEnumTypeInfo;
+    }
+
+    public virtual FoundationalTypeInfo VisitFoundationalTypeInfo(FoundationalTypeInfo foundationalTypeInfo)
+    {
+        return foundationalTypeInfo;
+    }
+
+    public virtual ScopedTypeInfo VisitScopedTypeInfo(ScopedTypeInfo scopedTypeInfo)
+    {
+        return scopedTypeInfo;
+    }
+
+    [DebuggerHidden]
     private bool IsVisitedAndMark(TypeRef typeRef)
     {
-        if (_visitedTypes.Contains(typeRef))
+        // Returns true if typeRef was already visited
+        return !_visitedTypes.Add(typeRef);
+    }
+
+    [DebuggerHidden]
+    [StackTraceHidden]
+    private void VisitTypeRef(TypeRef typeRef)
+    {
+        if (IsVisitedAndMark(typeRef))
         {
-            return true;
+            return;
         }
 
-        _visitedTypes.Add(typeRef);
-        return false;
+        typeRef.TypeInfo.Accept(this);
+    }
+
+    [DebuggerHidden]
+    [StackTraceHidden]
+    private void VisitTypeRefs(IEnumerable<TypeRef> typeRefs)
+    {
+        foreach (var typeRef in typeRefs)
+        {
+            VisitTypeRef(typeRef);
+        }
     }
 }

@@ -3,7 +3,7 @@ using Compiler.Semantics.TypeInformation.Types;
 
 namespace Compiler.Semantics.TypeInformation.TypeComparer;
 
-public class IsComparer : BaseComparer<CompileError>
+public class IsComparer : BaseComparer
 {
     public override bool CompareFunctionTypeInfo(FunctionTypeInfo typeInfo, TypeInfo other)
     {

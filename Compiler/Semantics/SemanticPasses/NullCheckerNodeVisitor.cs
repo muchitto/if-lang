@@ -5,7 +5,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class NullCheckerNodeVisitor : BaseNodeVisitor
+public class NullCheckerNodeVisitor(SemanticContext semanticContext) : BaseNodeVisitor(semanticContext)
 {
     public override AssignmentNode VisitAssignmentNode(AssignmentNode assignmentNode)
     {

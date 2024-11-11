@@ -1,11 +1,18 @@
 namespace Compiler.Syntax.Nodes;
 
-public class DeclarationNode(
+public abstract class DeclarationNode(
     NodeContext nodeContext,
-    DeclarationNameNode name,
+    DeclarationNamedNode named,
     List<AnnotationNode> annotationNodes)
-    : BaseNode(nodeContext)
+    : BaseNode(nodeContext), IEquatable<BaseNode>
 {
     public List<AnnotationNode> Annotations { get; } = annotationNodes;
-    public DeclarationNameNode Name { get; } = name;
+    public DeclarationNamedNode Named { get; } = named;
+
+    public virtual bool Equals(BaseNode? other)
+    {
+        return other is DeclarationNode declarationNode &&
+               Named.Equals(declarationNode.Named) &&
+               Annotations.SequenceEqual(declarationNode.Annotations);
+    }
 }

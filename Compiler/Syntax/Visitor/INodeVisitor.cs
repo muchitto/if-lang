@@ -1,13 +1,14 @@
 using Compiler.Syntax.Nodes;
+using Compiler.Syntax.Nodes.TypeInfoNodes;
 
 namespace Compiler.Syntax.Visitor;
 
 public interface INodeVisitor
 {
     public ProgramNode VisitProgramNode(ProgramNode programNode);
-    public TypeInfoNameNode VisitTypeNameNode(TypeInfoNameNode typeInfoNameNode);
+    public TypeInfoNameNode VisitTypeInfoNameNode(TypeInfoNameNode typeInfoNameNode);
     public BodyBlockNode VisitBodyBlockNode(BodyBlockNode bodyBlockNode);
-    public NumberLiteralNode VisitNumberNode(NumberLiteralNode numberLiteralNode);
+    public NumberLiteralNode VisitNumberLiteralNode(NumberLiteralNode numberLiteralNode);
     public FunctionCallArgumentNode VisitFunctionCallArgumentNode(FunctionCallArgumentNode functionCallArgumentNode);
     public VariableDeclarationNode VisitVariableDeclarationNode(VariableDeclarationNode variableDeclarationNode);
     public IdentifierNode VisitIdentifierNode(IdentifierNode identifierNode);
@@ -20,7 +21,8 @@ public interface INodeVisitor
     public ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode);
 
     public FunctionDeclarationParameterNode VisitFunctionDeclarationParameterNode(
-        FunctionDeclarationParameterNode functionDeclarationParameterNode);
+        FunctionDeclarationParameterNode functionDeclarationParameterNode
+    );
 
     public BooleanLiteralNode VisitBooleanLiteralNode(BooleanLiteralNode booleanLiteralNode);
     public IfStatementNode VisitIfStatementNode(IfStatementNode ifStatementNode);
@@ -75,20 +77,31 @@ public interface INodeVisitor
     public ExternVariableNode VisitExternVariableNode(ExternVariableNode externVariableNode);
 
     public EnumDeclarationItemParameterNode VisitEnumDeclarationItemParameterNode(
-        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode);
+        EnumDeclarationItemParameterNode enumDeclarationItemParameterNode
+    );
 
     public EnumDeclarationItemNode VisitEnumDeclarationItemNode(EnumDeclarationItemNode enumDeclarationItemNode);
 
-    public TypeInfoEnumNode VisitTypeInfoEnumNode(TypeInfoEnumNode typeInfoEnumNode);
+    public TypeInfoAnonymousEnumNode
+        VisitTypeInfoAnonymousEnumNode(TypeInfoAnonymousEnumNode typeInfoAnonymousEnumNode);
 
     public TypeInfoEnumFieldParamNode VisitTypeInfoEnumFieldParamNode(
-        TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode);
+        TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode
+    );
 
     public TypeInfoEnumFieldNode VisitTypeInfoEnumFieldNode(TypeInfoEnumFieldNode typeInfoEnumFieldNode);
 
-    public DeclarationNameNode VisitDeclarationNameNode(DeclarationNameNode declarationNameNode);
+    public DeclarationNamedNode VisitDeclarationNameNode(DeclarationNamedNode declarationNamedNode);
 
     public ArrayAccessNode VisitArrayAccessNode(ArrayAccessNode arrayAccessNode);
 
     public OptionalTypeInfoNode VisitOptionalTypeInfoNode(OptionalTypeInfoNode optionalTypeInfoNode);
+
+    public ReferenceNamedNode VisitReferenceNameNode(ReferenceNamedNode referenceNamedNode);
+
+    public NamedNode VisitNameNode(NamedNode namedNode);
+
+    public NullLiteralNode VisitNullLiteralNode(NullLiteralNode nullLiteralNode);
+
+    public IdentifiableNode VisitIdentifiableNode(IdentifiableNode identifiableNode);
 }

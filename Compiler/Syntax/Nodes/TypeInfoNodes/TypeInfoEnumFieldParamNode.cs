@@ -1,11 +1,15 @@
 using Compiler.Syntax.Visitor;
 
-namespace Compiler.Syntax.Nodes;
+namespace Compiler.Syntax.Nodes.TypeInfoNodes;
 
-public class TypeInfoEnumFieldParamNode(NodeContext nodeContext, DeclarationNameNode name, TypeInfoNode typeInfoNode)
+public class TypeInfoEnumFieldParamNode(
+    NodeContext nodeContext,
+    DeclarationNamedNode named,
+    TypeInfoNode typeInfoNode
+)
     : TypeInfoNode(nodeContext)
 {
-    public DeclarationNameNode Name { get; } = name;
+    public DeclarationNamedNode Named { get; } = named;
     public TypeInfoNode TypeInfoNode { get; } = typeInfoNode;
 
     public override void Accept(INodeVisitor nodeVisitor)
