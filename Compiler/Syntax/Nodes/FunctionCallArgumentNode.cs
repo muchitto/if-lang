@@ -10,4 +10,9 @@ public class FunctionCallArgumentNode(NodeContext nodeContext, BaseNode value) :
     {
         nodeVisitor.VisitFunctionCallArgumentNode(this);
     }
+
+    public override string ToString()
+    {
+        return Value.ToString();
+    }
 }

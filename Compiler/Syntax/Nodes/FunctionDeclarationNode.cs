@@ -20,4 +20,9 @@ public class FunctionDeclarationNode(
     {
         nodeVisitor.VisitFunctionDeclarationNode(this);
     }
+
+    public override string ToString()
+    {
+        return $"func {Named} (" + string.Join(", ", ParameterNodes) + ")" + ReturnTypeInfo;
+    }
 }

@@ -21,4 +21,9 @@ public class ObjectDeclarationNode(
     {
         nodeVisitor.VisitObjectDeclarationNode(this);
     }
+
+    public override string ToString()
+    {
+        return $"class {Named}" + (BaseName != null ? $": {BaseName}" : "");
+    }
 }

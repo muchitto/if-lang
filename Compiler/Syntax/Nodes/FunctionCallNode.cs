@@ -1,13 +1,28 @@
 using Compiler.Semantics.TypeInformation;
+using Compiler.Semantics.TypeInformation.Types;
 using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public class FunctionCallNode(NodeContext nodeContext, IdentifierNode name, List<FunctionCallArgumentNode> arguments)
+public class FunctionCallNode(NodeContext nodeContext, IdentifierNode name, List<FunctionCallArgumentNode> parameters)
     : IdentifiableNode(nodeContext)
 {
-    public List<FunctionCallArgumentNode> Arguments = arguments;
+    public List<FunctionCallArgumentNode> Parameters = parameters;
     public IdentifierNode Name { get; set; } = name;
+
+    public override TypeRef ReturnedTypeRef
+    {
+        get
+        {
+            if (TypeRef.TypeInfo is FunctionTypeInfo functionTypeInfo)
+            {
+                return functionTypeInfo.ReturnType;
+            }
+
+            throw new Exception("type is not a function");
+        }
+    }
+
 
     public override string GetName()
     {
@@ -19,8 +34,8 @@ public class FunctionCallNode(NodeContext nodeContext, IdentifierNode name, List
         nodeVisitor.VisitFunctionCallNode(this);
     }
 
-    public override void SetTypeRef(TypeRef typeRef)
+    public override string ToString()
     {
-        base.SetTypeRef(typeRef);
+        return Name + "(" + string.Join(", ", Parameters) + ")";
     }
 }

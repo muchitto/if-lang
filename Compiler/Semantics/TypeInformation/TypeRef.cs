@@ -2,6 +2,7 @@ using Compiler.ErrorHandling;
 using Compiler.Semantics.TypeInformation.TypeComparer;
 using Compiler.Semantics.TypeInformation.Types;
 using Compiler.Semantics.TypeInformation.TypeVisitor;
+using Compiler.Syntax.Nodes;
 
 namespace Compiler.Semantics.TypeInformation;
 
@@ -11,7 +12,7 @@ public class TypeRef(TypeInfo typeInfo)
 
     public bool IsOptionalType => TypeInfo is GenericTypeInfo { Name: "Optional" };
 
-    public bool IsUnknown => typeInfo.IsUnknown;
+    public bool IsUnknown => TypeInfo.IsUnknown;
 
     public bool Compare<TComparer>(TypeRef other, out List<CompileError> errors)
         where TComparer : ITypeComparer<CompileError>, new()
@@ -43,6 +44,11 @@ public class TypeRef(TypeInfo typeInfo)
     public bool Compare(TypeInfo other)
     {
         return Compare<BasicComparer>(other);
+    }
+
+    public bool Compare(BaseNode baseNode)
+    {
+        return Compare(baseNode.TypeRef);
     }
 
     public bool HasDeferredTypes()

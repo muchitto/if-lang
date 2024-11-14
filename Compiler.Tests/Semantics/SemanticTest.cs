@@ -134,6 +134,7 @@ public class SemanticTest : CompilationTest
             var j : bool[] = []
         ";
 
+
         var program = Parser.Parse("UsingBaseTypesAsArrayTypes", source);
 
         SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());

@@ -7,7 +7,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Semantics.TypeInference;
 
-public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor(semanticContext)
+public class InferenceNodeVisitor(SemanticHandler semanticHandler) : BaseNodeVisitor(semanticHandler)
 {
     public Stack<TypeInfo> TypeStack { get; } = new();
     public List<CompileError> Errors { get; } = [];
@@ -21,14 +21,13 @@ public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor
             return base.VisitVariableDeclarationNode(variableDeclarationNode);
         }
 
-        if (!variableDeclarationNode.TypeRef.Compare(TypeInfo.Unknown) &&
-            variableDeclarationNode.Value.TypeRef.HasDeferredTypes())
+        if (!variableDeclarationNode.TypeRef.Compare(TypeInfo.Unknown)
+            && variableDeclarationNode.Value.TypeRef.HasDeferredTypes())
         {
-            TypeStack.Push(variableDeclarationNode.TypeRef.TypeInfo);
-
-            variableDeclarationNode.Value.Accept(this);
-
-            TypeStack.Pop();
+            using (TypeStackScope(variableDeclarationNode.TypeRef.TypeInfo))
+            {
+                variableDeclarationNode.Value.Accept(this);
+            }
         }
         else if (variableDeclarationNode.Value is EnumShortHandNode enumShortHandNode)
         {
@@ -41,11 +40,10 @@ public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor
                 );
             }
 
-            TypeStack.Push(variableDeclarationNode.TypeRef.TypeInfo);
-
-            enumShortHandNode.Accept(this);
-
-            TypeStack.Pop();
+            using (TypeStackScope(variableDeclarationNode.TypeRef.TypeInfo))
+            {
+                enumShortHandNode.Accept(this);
+            }
         }
 
         return variableDeclarationNode;
@@ -63,22 +61,21 @@ public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor
             );
         }
 
-        TypeStack.Push(structureTypeInfo);
-
-        foreach (var field in structureLiteralNode.Fields)
+        using (TypeStackScope(structureTypeInfo))
         {
-            if (!structureTypeInfo.Fields.TryGetValue(field.Name.Name, out var typeRef))
+            foreach (var field in structureLiteralNode.Fields)
             {
-                throw new CompileError.SemanticError(
-                    "field not found",
-                    field.NodeContext.PositionData
-                );
+                if (!structureTypeInfo.Fields.TryGetValue(field.Name.Name, out var typeRef))
+                {
+                    throw new CompileError.SemanticError(
+                        "field not found",
+                        field.NodeContext.PositionData
+                    );
+                }
+
+                field.Accept(this);
             }
-
-            field.Accept(this);
         }
-
-        TypeStack.Pop();
 
         return structureLiteralNode;
     }
@@ -105,11 +102,10 @@ public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor
             );
         }
 
-        TypeStack.Push(typeRef.TypeInfo);
-
-        structureLiteralFieldNode.Field.Accept(this);
-
-        TypeStack.Pop();
+        using (TypeStackScope(typeRef.TypeInfo))
+        {
+            structureLiteralFieldNode.Field.Accept(this);
+        }
 
         return structureLiteralFieldNode;
     }
@@ -120,7 +116,6 @@ public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor
          * TODO: Maybe we should figure out how to do a general generic type inference
          * function instead of always manually handling it.
          */
-
         if (arrayLiteralNode.TypeRef.TypeInfo is not GenericTypeInfo genericTypeInfo)
         {
             throw new CompileError.SemanticError(
@@ -155,7 +150,6 @@ public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor
             );
         }
 
-
         genericTypeInfo.GenericParams.First().TypeInfo = peekedGenericTypeInfo.GenericParams.First().TypeInfo;
 
         return arrayLiteralNode;
@@ -180,13 +174,14 @@ public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor
 
     public override ObjectVariableOverride VisitObjectVariableOverride(ObjectVariableOverride objectVariableOverride)
     {
-        if (objectVariableOverride.Value.TypeRef.HasDeferredTypes())
+        if (!objectVariableOverride.Value.TypeRef.HasDeferredTypes())
         {
-            TypeStack.Push(objectVariableOverride.TypeRef.TypeInfo);
+            return objectVariableOverride;
+        }
 
+        using (TypeStackScope(objectVariableOverride.TypeRef.TypeInfo))
+        {
             objectVariableOverride.Value.Accept(this);
-
-            TypeStack.Pop();
         }
 
         return objectVariableOverride;
@@ -205,20 +200,27 @@ public class InferenceVisitor(SemanticContext semanticContext) : BaseNodeVisitor
             );
         }
 
-        if (leftDeferred != rightDeferred)
+        if (leftDeferred == rightDeferred)
         {
-            var targetNode = leftDeferred ? expressionNode.Left : expressionNode.Right;
-            var sourceNode = leftDeferred ? expressionNode.Right : expressionNode.Left;
-
-            TypeStack.Push(sourceNode.TypeRef.TypeInfo);
-
-            targetNode.Accept(this);
-
-            TypeStack.Pop();
-
-            targetNode.TypeRef = sourceNode.TypeRef;
+            return expressionNode;
         }
 
+        var targetNode = leftDeferred ? expressionNode.Left : expressionNode.Right;
+        var sourceNode = leftDeferred ? expressionNode.Right : expressionNode.Left;
+
+        using (TypeStackScope(sourceNode.TypeRef.TypeInfo))
+        {
+            targetNode.Accept(this);
+        }
+
+        targetNode.TypeRef = sourceNode.TypeRef;
+
         return expressionNode;
+    }
+
+    private ActionDisposable TypeStackScope(TypeInfo typeInfo)
+    {
+        TypeStack.Push(typeInfo);
+        return new ActionDisposable(() => TypeStack.Pop());
     }
 }

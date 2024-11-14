@@ -33,9 +33,9 @@ public abstract class BaseComparer : ITypeComparer
 
         for (var i = 0; i < typeInfo.Parameters.Count; i++)
         {
-            var ourParameter = typeInfo.Parameters.ElementAt(i).Value.TypeInfo;
-            var theirParameter = functionTypeInfo.Parameters.ElementAt(i).Value.TypeInfo;
-            if (ourParameter.Compare(this, ourParameter))
+            var ourParameter = typeInfo.Parameters[i].TypeRef.TypeInfo;
+            var theirParameter = functionTypeInfo.Parameters[i].TypeRef.TypeInfo;
+            if (ourParameter.Compare(this, theirParameter))
             {
                 return false;
             }

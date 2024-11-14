@@ -1,3 +1,5 @@
+using Compiler.Semantics.ScopeHandling;
+
 namespace Compiler.Semantics;
 
 public class SemanticContext

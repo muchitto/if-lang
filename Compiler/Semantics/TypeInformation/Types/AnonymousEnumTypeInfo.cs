@@ -1,3 +1,5 @@
+using Compiler.Semantics.ScopeHandling;
+
 namespace Compiler.Semantics.TypeInformation.Types;
 
 public class AnonymousEnumTypeInfo(Scope scope, Dictionary<string, TypeRef> fields)

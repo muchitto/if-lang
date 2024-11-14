@@ -3,7 +3,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class ControlFlowConstructionVisitor(SemanticContext semanticContext) : BaseNodeVisitor(semanticContext)
+public class ControlFlowConstructionVisitor(SemanticHandler semanticHandler) : BaseNodeVisitor(semanticHandler)
 {
     public override AnnotationNode VisitAnnotationNode(AnnotationNode annotationNode)
     {

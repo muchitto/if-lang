@@ -1,9 +1,11 @@
+using Compiler.Semantics.ScopeHandling;
 using Compiler.Syntax.Nodes;
 using Compiler.Syntax.Visitor;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class TypePromotionNodeVisitor(SemanticContext semanticContext) : BaseNodeVisitor(semanticContext)
+public class TypePromotionNodeVisitor(SemanticHandler semanticHandler)
+    : BaseNodeVisitor(semanticHandler, new DoNothingScopeHandler(semanticHandler))
 {
     public override VariableDeclarationNode VisitVariableDeclarationNode(
         VariableDeclarationNode variableDeclarationNode

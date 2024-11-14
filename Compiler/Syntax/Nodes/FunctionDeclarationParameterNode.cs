@@ -17,4 +17,9 @@ public class FunctionDeclarationParameterNode(
     {
         nodeVisitor.VisitFunctionDeclarationParameterNode(this);
     }
+
+    public override string ToString()
+    {
+        return Named + " : " + TypeInfoNode;
+    }
 }

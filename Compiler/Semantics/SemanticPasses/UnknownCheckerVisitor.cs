@@ -5,7 +5,7 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class UnknownCheckerVisitor(SemanticContext semanticContext) : BaseNodeVisitor(semanticContext)
+public class UnknownCheckerVisitor(SemanticHandler semanticHandler) : BaseNodeVisitor(semanticHandler)
 {
     public override TypeInfoNameNode VisitTypeInfoNameNode(TypeInfoNameNode typeInfoNameNode)
     {

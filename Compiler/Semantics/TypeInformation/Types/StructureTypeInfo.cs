@@ -1,3 +1,5 @@
+using Compiler.Semantics.ScopeHandling;
+
 namespace Compiler.Semantics.TypeInformation.Types;
 
 public class StructureTypeInfo(Scope scope, Dictionary<string, TypeRef> fields)

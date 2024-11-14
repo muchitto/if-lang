@@ -20,4 +20,9 @@ public class TypeInfoNameNode(NodeContext nodeContext, string name, List<TypeInf
     {
         return new TypeInfoNameNode(NodeContext, Name, genericParameters);
     }
+
+    public override string ToString()
+    {
+        return Name;
+    }
 }

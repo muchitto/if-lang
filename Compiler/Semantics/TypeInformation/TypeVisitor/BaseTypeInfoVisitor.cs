@@ -80,7 +80,7 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
     public virtual FunctionTypeInfo VisitFunctionTypeInfo(FunctionTypeInfo functionTypeInfo)
     {
         VisitTypeRef(functionTypeInfo.ReturnType);
-        VisitTypeRefs(functionTypeInfo.Parameters.Values);
+        VisitTypeRefs(functionTypeInfo.Parameters.Select(p => p.TypeRef));
         return functionTypeInfo;
     }
 
@@ -102,7 +102,8 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
     }
 
     public virtual AbstractStructuralTypeInfo VisitAbstractStructuralTypeInfo(
-        AbstractStructuralTypeInfo abstractStructuralTypeInfo)
+        AbstractStructuralTypeInfo abstractStructuralTypeInfo
+    )
     {
         return abstractStructuralTypeInfo switch
         {

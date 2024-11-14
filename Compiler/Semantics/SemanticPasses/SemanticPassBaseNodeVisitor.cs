@@ -1,4 +1,5 @@
 using Compiler.ErrorHandling;
+using Compiler.Semantics.ScopeHandling;
 using Compiler.Semantics.TypeInformation;
 using Compiler.Semantics.TypeInformation.Types;
 using Compiler.Syntax.Nodes;
@@ -6,8 +7,8 @@ using Compiler.Syntax.Nodes.TypeInfoNodes;
 
 namespace Compiler.Semantics.SemanticPasses;
 
-public class SemanticPassBaseNodeVisitor(SemanticContext semanticContext)
-    : SemanticHelperBaseNodeVisitor(semanticContext)
+public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseScopeHandler baseScopeHandler)
+    : SemanticHelperBaseNodeVisitor(semanticHandler, baseScopeHandler)
 {
     private readonly List<ObjectDeclarationNode> _objectDeclarationNodes = [];
 
@@ -60,7 +61,7 @@ public class SemanticPassBaseNodeVisitor(SemanticContext semanticContext)
 
     public override TypeInfoNameNode VisitTypeInfoNameNode(TypeInfoNameNode typeInfoNameNode)
     {
-        if (TryGetInNodeScope(typeInfoNameNode.Name, SymbolType.Type, out var nodeScopeSymbol))
+        if (SemanticHandler.TryGetInNodeScope(typeInfoNameNode.Name, SymbolType.Type, out var nodeScopeSymbol))
         {
             typeInfoNameNode.TypeRef = nodeScopeSymbol.TypeRef;
         }
@@ -70,7 +71,7 @@ public class SemanticPassBaseNodeVisitor(SemanticContext semanticContext)
         }
         else
         {
-            if (TryLookupType(typeInfoNameNode.Name, out var symbol))
+            if (SemanticHandler.TryLookupType(typeInfoNameNode.Name, out var symbol))
             {
                 typeInfoNameNode.TypeRef = symbol.TypeRef;
             }
@@ -87,19 +88,18 @@ public class SemanticPassBaseNodeVisitor(SemanticContext semanticContext)
         TypeInfoAnonymousEnumNode typeInfoAnonymousEnumNode
     )
     {
-        var scope = NewScope(ScopeType.Enum, typeInfoAnonymousEnumNode);
-
-        var fields = new Dictionary<string, TypeRef>();
-        foreach (var field in typeInfoAnonymousEnumNode.Fields)
+        using (EnterScope(ScopeType.Enum, typeInfoAnonymousEnumNode, out var scope))
         {
-            VisitTypeInfoNode(field);
+            var fields = new Dictionary<string, TypeRef>();
+            foreach (var field in typeInfoAnonymousEnumNode.Fields)
+            {
+                VisitTypeInfoNode(field);
 
-            fields.Add(field.Named.Name, field.TypeRef);
+                fields.Add(field.Named.Name, field.TypeRef);
+            }
+
+            typeInfoAnonymousEnumNode.TypeRef.TypeInfo = new AnonymousEnumTypeInfo(scope, fields);
         }
-
-        typeInfoAnonymousEnumNode.TypeRef.TypeInfo = new AnonymousEnumTypeInfo(scope, fields);
-
-        PopScope();
 
         return typeInfoAnonymousEnumNode;
     }
@@ -148,7 +148,8 @@ public class SemanticPassBaseNodeVisitor(SemanticContext semanticContext)
     {
         VisitIdentifierNode(memberAccessNode.BaseObject);
 
-        if (TryLookupIdentifier(memberAccessNode.BaseObject.GetName(), out var baseObjectIdentifierSymbol)
+        if (SemanticHandler.TryLookupIdentifier(memberAccessNode.BaseObject.GetName(),
+                out var baseObjectIdentifierSymbol)
             && baseObjectIdentifierSymbol.Scope.Parent != null)
         {
             if (baseObjectIdentifierSymbol.TypeRef.TypeInfo is not ObjectTypeInfo objectTypeInfo)
@@ -159,11 +160,10 @@ public class SemanticPassBaseNodeVisitor(SemanticContext semanticContext)
                 );
             }
 
-            RecallScope(objectTypeInfo.Scope);
-
-            VisitBaseNode(memberAccessNode.Member);
-
-            PopScope();
+            using (MustRecallScope(objectTypeInfo.Scope))
+            {
+                VisitBaseNode(memberAccessNode.Member);
+            }
         }
         else
         {
@@ -182,7 +182,6 @@ public class SemanticPassBaseNodeVisitor(SemanticContext semanticContext)
         }
 
         memberAccessNode.TypeRef = memberAccessNode.Member.TypeRef;
-
 
         return memberAccessNode;
     }
@@ -206,7 +205,7 @@ public class SemanticPassBaseNodeVisitor(SemanticContext semanticContext)
 
         if (identifierNode.Name == "super")
         {
-            if (!TryGetScopeOfType(ScopeType.Object, out var objectScope))
+            if (!SemanticHandler.TryGetScopeOfType(ScopeType.Object, out var objectScope))
             {
                 throw new CompileError.SemanticError(
                     "super can only be used in object scope",
@@ -235,7 +234,7 @@ public class SemanticPassBaseNodeVisitor(SemanticContext semanticContext)
             return identifierNode;
         }
 
-        if (TryLookupIdentifier(identifierNode.Name, out var symbol))
+        if (SemanticHandler.TryLookupIdentifier(identifierNode.Name, out var symbol))
         {
             if (symbol.TypeRef.TypeInfo.IsUnknown)
             {

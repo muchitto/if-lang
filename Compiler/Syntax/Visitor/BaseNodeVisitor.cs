@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Compiler.Semantics;
+using Compiler.Semantics.ScopeHandling;
 using Compiler.Syntax.Nodes;
 using Compiler.Syntax.Nodes.TypeInfoNodes;
 
@@ -12,9 +13,23 @@ public class VisitorError : Exception
     }
 }
 
-public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVisitor
+public abstract class BaseNodeVisitor : INodeVisitor
 {
-    protected readonly SemanticContext SemanticContext = semanticContext;
+    protected BaseNodeVisitor(SemanticHandler semanticHandler, BaseScopeHandler scopeHandler)
+    {
+        SemanticHandler = semanticHandler;
+        ScopeHandler = scopeHandler;
+    }
+
+    protected BaseNodeVisitor(SemanticHandler semanticHandler) : this(semanticHandler,
+        new DoNothingScopeHandler(semanticHandler))
+    {
+    }
+
+    protected SemanticContext SemanticContext => SemanticHandler.SemanticContext;
+    protected SemanticHandler SemanticHandler { get; init; }
+
+    protected BaseScopeHandler ScopeHandler { get; init; }
 
     [StackTraceHidden]
     [DebuggerHidden]
@@ -28,7 +43,11 @@ public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVi
     [DebuggerHidden]
     public virtual ProgramNode VisitProgramNode(ProgramNode programNode)
     {
-        VisitNodes(programNode.Declarations);
+        using (EnterScope(ScopeType.Program, programNode))
+        {
+            VisitNodes(programNode.Declarations);
+        }
+
         return programNode;
     }
 
@@ -43,7 +62,11 @@ public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVi
     [DebuggerHidden]
     public virtual BodyBlockNode VisitBodyBlockNode(BodyBlockNode bodyBlockNode)
     {
-        VisitNodes(bodyBlockNode.Statements);
+        using (EnterScope(ScopeType.BodyBlock, bodyBlockNode))
+        {
+            VisitNodes(bodyBlockNode.Statements);
+        }
+
         return bodyBlockNode;
     }
 
@@ -86,10 +109,14 @@ public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVi
     [DebuggerHidden]
     public virtual FunctionDeclarationNode VisitFunctionDeclarationNode(FunctionDeclarationNode functionDeclarationNode)
     {
-        VisitNode(functionDeclarationNode.Named);
-        VisitNodes(functionDeclarationNode.Annotations);
-        VisitNodes(functionDeclarationNode.ParameterNodes);
-        VisitNode(functionDeclarationNode.Body);
+        using (EnterScope(ScopeType.Function, functionDeclarationNode))
+        {
+            VisitNode(functionDeclarationNode.Named);
+            VisitNodes(functionDeclarationNode.Annotations);
+            VisitNodes(functionDeclarationNode.ParameterNodes);
+            VisitNode(functionDeclarationNode.Body);
+        }
+
         VisitNode(functionDeclarationNode.ReturnTypeInfo);
         return functionDeclarationNode;
     }
@@ -98,7 +125,7 @@ public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVi
     [DebuggerHidden]
     public virtual FunctionCallNode VisitFunctionCallNode(FunctionCallNode functionCallNode)
     {
-        VisitNodes(functionCallNode.Arguments);
+        VisitNodes(functionCallNode.Parameters);
         return functionCallNode;
     }
 
@@ -115,10 +142,14 @@ public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVi
     [DebuggerHidden]
     public virtual ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode)
     {
-        VisitNode(objectDeclarationNode.Named);
-        VisitNode(objectDeclarationNode.BaseName);
-        VisitNodes(objectDeclarationNode.Annotations);
-        VisitNodes(objectDeclarationNode.Fields);
+        using (EnterScope(ScopeType.Object, objectDeclarationNode))
+        {
+            VisitNode(objectDeclarationNode.Named);
+            VisitNode(objectDeclarationNode.BaseName);
+            VisitNodes(objectDeclarationNode.Annotations);
+            VisitNodes(objectDeclarationNode.Fields);
+        }
+
         return objectDeclarationNode;
     }
 
@@ -251,7 +282,11 @@ public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVi
     [DebuggerHidden]
     public virtual TypeInfoStructureNode VisitTypeInfoStructureNode(TypeInfoStructureNode typeInfoStructureNode)
     {
-        VisitNodes(typeInfoStructureNode.Fields.Values);
+        using (EnterScope(ScopeType.Object, typeInfoStructureNode))
+        {
+            VisitNodes(typeInfoStructureNode.Fields.Values);
+        }
+
         return typeInfoStructureNode;
     }
 
@@ -259,9 +294,14 @@ public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVi
     [DebuggerHidden]
     public virtual StructureLiteralNode VisitStructureLiteralNode(StructureLiteralNode structureLiteralNode)
     {
-        VisitNodes(structureLiteralNode.Fields);
+        using (EnterScope(ScopeType.Object, structureLiteralNode))
+        {
+            VisitNodes(structureLiteralNode.Fields);
+        }
+
         return structureLiteralNode;
     }
+
 
     [StackTraceHidden]
     [DebuggerHidden]
@@ -472,5 +512,36 @@ public abstract class BaseNodeVisitor(SemanticContext semanticContext) : INodeVi
         {
             node.Accept(this);
         }
+    }
+
+    protected ActionItemDisposable<Scope> EnterScope(ScopeType scopeType, BaseNode baseNode)
+    {
+        return EnterScope(scopeType, baseNode, out _);
+    }
+
+    protected ActionItemDisposable<Scope> EnterScope(ScopeType scopeType, BaseNode baseNode, out Scope scope)
+    {
+        scope = ScopeHandler.EnterScope(scopeType, baseNode);
+
+        return new ActionItemDisposable<Scope>(scope, _ => ScopeHandler.ExitScope());
+    }
+
+    protected ActionItemDisposable<Scope> MustRecallScope(BaseNode baseNode)
+    {
+        return MustRecallScope(baseNode, out _);
+    }
+
+    protected ActionItemDisposable<Scope> MustRecallScope(BaseNode baseNode, out Scope scope)
+    {
+        scope = ScopeHandler.MustRecallScope(baseNode);
+
+        return new ActionItemDisposable<Scope>(scope, _ => ScopeHandler.ExitScope());
+    }
+
+    protected ActionItemDisposable<Scope> MustRecallScope(Scope scope)
+    {
+        ScopeHandler.MustRecallScope(scope);
+
+        return new ActionItemDisposable<Scope>(scope, _ => ScopeHandler.ExitScope());
     }
 }

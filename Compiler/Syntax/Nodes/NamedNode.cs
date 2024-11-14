@@ -29,4 +29,9 @@ public class NamedNode(NodeContext nodeContext, string name, List<TypeInfoNode> 
     {
         return new DeclarationNamedNode(NodeContext, Name, GenericParameters);
     }
+
+    public override string ToString()
+    {
+        return Name;
+    }
 }

@@ -26,4 +26,9 @@ public class IdentifierNode(NodeContext nodeContext, string name) : Identifiable
     {
         return new DeclarationNamedNode(NodeContext, Name, []);
     }
+
+    public override string ToString()
+    {
+        return Name;
+    }
 }

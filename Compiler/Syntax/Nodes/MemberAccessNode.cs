@@ -15,4 +15,9 @@ public class MemberAccessNode(NodeContext nodeContext, IdentifierNode baseObject
     {
         nodeVisitor.VisitMemberAccessNode(this);
     }
+
+    public override string ToString()
+    {
+        return BaseObject + "." + Member;
+    }
 }

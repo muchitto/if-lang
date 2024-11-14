@@ -1,11 +1,11 @@
 using Compiler.Syntax.Nodes;
 
-namespace Compiler;
+namespace Compiler.Semantics.ScopeHandling;
 
 public enum ScopeType
 {
     Program,
-    BlockBody,
+    BodyBlock,
     Function,
     Object,
     Enum
@@ -21,4 +21,9 @@ public class Scope(Scope? parent, ScopeType type, BaseNode attachedNode)
     public List<Symbol> Symbols { get; } = [];
 
     public bool ReturnStatementFound { get; set; } = false;
+
+    public override string ToString()
+    {
+        return $"Scope {{Type = {Type}, AttachedNode = {attachedNode}}}";
+    }
 }

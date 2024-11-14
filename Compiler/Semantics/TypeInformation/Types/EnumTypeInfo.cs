@@ -1,3 +1,5 @@
+using Compiler.Semantics.ScopeHandling;
+
 namespace Compiler.Semantics.TypeInformation.Types;
 
 public class EnumTypeInfo(Scope scope, string name, Dictionary<string, TypeRef> fields)
