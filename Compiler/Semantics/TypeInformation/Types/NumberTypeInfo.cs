@@ -31,19 +31,21 @@ public class NumberTypeInfo(NumberType type) : FoundationalTypeInfo
         { NumberType.Float64, [] } // No implicit conversions from Float64
     };
 
-    public override string? TypeName => NumberType switch
+    public static Dictionary<string, NumberType> StringToNumberType = new()
     {
-        NumberType.Int8 => "int8",
-        NumberType.Int16 => "int16",
-        NumberType.Int32 => "int32",
-        NumberType.Int64 => "int64",
-        NumberType.UInt16 => "uint16",
-        NumberType.UInt32 => "uint32",
-        NumberType.UInt64 => "uint64",
-        NumberType.Float32 => "float32",
-        NumberType.Float64 => "float64",
-        _ => throw new ArgumentOutOfRangeException()
+        { "int", NumberType.Int32 },
+        { "int16", NumberType.Int16 },
+        { "int32", NumberType.Int32 },
+        { "int64", NumberType.Int64 },
+        { "uint16", NumberType.UInt16 },
+        { "uint32", NumberType.UInt32 },
+        { "uint64", NumberType.UInt64 },
+        { "float", NumberType.Float64 },
+        { "float32", NumberType.Float32 },
+        { "float64", NumberType.Float64 }
     };
+
+    public override string? TypeName => StringToNumberType.First(v => v.Value == NumberType).Key;
 
 
     public NumberType NumberType { get; } = type;
