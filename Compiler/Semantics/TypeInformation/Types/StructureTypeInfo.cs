@@ -5,6 +5,8 @@ namespace Compiler.Semantics.TypeInformation.Types;
 public class StructureTypeInfo(Scope scope, Dictionary<string, TypeRef> fields)
     : AbstractStructuralTypeInfo(scope, fields)
 {
+    public override string? TypeName => null;
+
     public override string ToString()
     {
         return $"Structure<{string.Join(", ", Fields.Select(x => $"{x.Key}: {x.Value}"))}>";

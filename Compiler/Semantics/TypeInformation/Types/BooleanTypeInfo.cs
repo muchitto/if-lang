@@ -2,9 +2,11 @@ namespace Compiler.Semantics.TypeInformation.Types;
 
 public class BooleanTypeInfo : FoundationalTypeInfo
 {
+    public override string? TypeName => "boolean";
+
     public override string ToString()
     {
-        return "boolean";
+        return TypeName!;
     }
 
     public override void Accept(ITypeInfoVisitor visitor)

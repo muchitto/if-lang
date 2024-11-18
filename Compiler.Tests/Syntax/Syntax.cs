@@ -23,7 +23,7 @@ public class Syntax : CompilationTest
             if (program.Declarations[0] is VariableDeclarationNode variableDeclaration)
             {
                 Assert.Equal("a", variableDeclaration.Named.Name);
-                Assert.True(variableDeclaration.TypeInfo is TypeInfoNameNode { Name: "Int" });
+                Assert.True(variableDeclaration.TypeInfoNode is TypeInfoNameNode { Name: "Int" });
                 Assert.True(variableDeclaration.Value is NumberLiteralNode { Number: "10" });
             }
             else

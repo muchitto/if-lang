@@ -1,3 +1,4 @@
+using Compiler.Semantics.TypeInformation;
 using Compiler.Syntax.Nodes.TypeInfoNodes;
 using Compiler.Syntax.Visitor;
 
@@ -10,7 +11,8 @@ public class FunctionDeclarationNode(
     TypeInfoNode? returnTypeInfo,
     BodyBlockNode body,
     List<AnnotationNode> annotationNodes
-) : DeclarationNode(nodeContext, named, annotationNodes)
+)
+    : DeclarationNode(nodeContext, named, annotationNodes)
 {
     public List<FunctionDeclarationParameterNode> ParameterNodes { get; } = parameterNodes;
     public TypeInfoNode? ReturnTypeInfo { get; } = returnTypeInfo;
@@ -25,4 +27,5 @@ public class FunctionDeclarationNode(
     {
         return $"func {Named} (" + string.Join(", ", ParameterNodes) + ")" + ReturnTypeInfo;
     }
+
 }

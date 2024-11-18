@@ -158,6 +158,19 @@ public class UnknownCheckerVisitor(SemanticHandler semanticHandler) : BaseNodeVi
         return base.VisitVariableDeclarationNode(variableDeclarationNode);
     }
 
+    public override NamedNode VisitNamedNode(NamedNode namedNode)
+    {
+        if (namedNode.TypeRef.TypeInfo.IsIncomplete)
+        {
+            throw new CompileError.SemanticError(
+                $"named {namedNode.Name} type is incomplete",
+                namedNode
+            );
+        }
+
+        return base.VisitNamedNode(namedNode);
+    }
+
     public override IdentifierNode VisitIdentifierNode(IdentifierNode identifierNode)
     {
         if (identifierNode.TypeRef.TypeInfo.IsIncomplete)

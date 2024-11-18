@@ -2,6 +2,8 @@ namespace Compiler.Semantics.TypeInformation.Types;
 
 public class StringTypeInfo : FoundationalTypeInfo
 {
+    public override string? TypeName => "string";
+
     public override string ToString()
     {
         return "string";

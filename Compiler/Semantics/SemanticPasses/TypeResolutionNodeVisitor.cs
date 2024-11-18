@@ -45,6 +45,15 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
         _currentDeclarations.Pop();
     }
 
+    public override TypeCastNode VisitTypeCastNode(TypeCastNode typeCastNode)
+    {
+        base.VisitTypeCastNode(typeCastNode);
+
+        typeCastNode.TypeRef = typeCastNode.ToTypeInfoName.TypeRef;
+
+        return typeCastNode;
+    }
+
     public override ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode)
     {
         AddObjectDeclarationNode(objectDeclarationNode);
@@ -92,7 +101,7 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
             }
         }
 
-        if (objectDeclarationNode.TypeRef.Compare(TypeInfo.Unknown))
+        if (objectDeclarationNode.TypeRef.IsUnknown)
         {
             throw new CompileError.SemanticError(
                 $"object {objectDeclarationNode.Named.Name} type not resolved",
@@ -231,7 +240,7 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
         FunctionDeclarationParameterNode functionDeclarationParameterNode
     )
     {
-        if (!functionDeclarationParameterNode.TypeRef.Compare(TypeInfo.Unknown))
+        if (!functionDeclarationParameterNode.TypeRef.IsUnknown)
         {
             return base.VisitFunctionDeclarationParameterNode(functionDeclarationParameterNode);
         }
@@ -319,7 +328,7 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
             );
         }
 
-        if (arrayAccessNode.Accessor.TypeRef.TypeInfo != TypeInfo.Int)
+        if (arrayAccessNode.Accessor.TypeRef.TypeInfo != TypeInfo.Int32)
         {
             throw new CompileError.SemanticError(
                 "array accessor must be int",
@@ -605,9 +614,9 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
 
         TypeRef? typeRef = null;
 
-        if (variableDeclarationNode.TypeInfo != null)
+        if (variableDeclarationNode.TypeInfoNode != null)
         {
-            var visitedTypeName = VisitTypeInfoNode(variableDeclarationNode.TypeInfo);
+            var visitedTypeName = VisitTypeInfoNode(variableDeclarationNode.TypeInfoNode);
 
             typeRef = visitedTypeName.TypeRef;
 
@@ -640,16 +649,6 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
                 var inferenceVisitor = new InferenceNodeVisitor(SemanticHandler);
                 inferenceVisitor.VisitVariableDeclarationNode(variableDeclarationNode);
             }
-
-            /*
-            if (typeRef != null && !typeRef.Compare(visitedValue.TypeRef))
-            {
-                throw new CompileError.SemanticError(
-                    "variable type mismatch",
-                    variableDeclarationNode.NodeContext.PositionData
-                );
-            }
-            */
 
             if (typeRef == null)
             {
@@ -811,7 +810,7 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
             {
                 VisitFunctionDeclarationParameterNode(parameterNode);
 
-                if (parameterNode.TypeRef.Compare(TypeInfo.Unknown))
+                if (parameterNode.TypeRef.IsUnknown)
                 {
                     throw new CompileError.SemanticError(
                         $"function parameter {parameterNode.Named.Name} type not resolved",

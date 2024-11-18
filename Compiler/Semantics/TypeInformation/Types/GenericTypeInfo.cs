@@ -2,6 +2,8 @@ namespace Compiler.Semantics.TypeInformation.Types;
 
 public class GenericTypeInfo(string name, List<TypeRef> genericParams) : TypeInfo
 {
+    public override string? TypeName => null;
+
     public string Name { get; } = name;
     public List<TypeRef> GenericParams { get; } = genericParams;
 

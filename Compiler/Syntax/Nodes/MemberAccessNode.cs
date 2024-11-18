@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Compiler.Semantics.TypeInformation;
 using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;

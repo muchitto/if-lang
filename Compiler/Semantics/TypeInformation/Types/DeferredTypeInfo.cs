@@ -2,6 +2,8 @@ namespace Compiler.Semantics.TypeInformation.Types;
 
 public class DeferredTypeInfo : FoundationalTypeInfo
 {
+    public override string? TypeName => null;
+
     public override string ToString()
     {
         return "deferred";

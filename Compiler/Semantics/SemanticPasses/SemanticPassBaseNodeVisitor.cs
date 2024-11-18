@@ -25,11 +25,11 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
     {
         if (numberLiteralNode.IsFloat())
         {
-            numberLiteralNode.TypeRef = new TypeRef(TypeInfo.Float);
+            numberLiteralNode.TypeRef = new TypeRef(TypeInfo.Float32);
         }
         else
         {
-            numberLiteralNode.TypeRef = new TypeRef(TypeInfo.Int);
+            numberLiteralNode.TypeRef = new TypeRef(TypeInfo.Int32);
         }
 
         return numberLiteralNode;
@@ -46,9 +46,9 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
         VariableDeclarationNode variableDeclarationNode
     )
     {
-        if (variableDeclarationNode.TypeInfo != null)
+        if (variableDeclarationNode.TypeInfoNode != null)
         {
-            VisitTypeInfoNode(variableDeclarationNode.TypeInfo);
+            VisitTypeInfoNode(variableDeclarationNode.TypeInfoNode);
         }
 
         return base.VisitVariableDeclarationNode(variableDeclarationNode);

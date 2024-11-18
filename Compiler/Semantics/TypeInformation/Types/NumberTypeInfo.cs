@@ -31,6 +31,21 @@ public class NumberTypeInfo(NumberType type) : FoundationalTypeInfo
         { NumberType.Float64, [] } // No implicit conversions from Float64
     };
 
+    public override string? TypeName => NumberType switch
+    {
+        NumberType.Int8 => "int8",
+        NumberType.Int16 => "int16",
+        NumberType.Int32 => "int32",
+        NumberType.Int64 => "int64",
+        NumberType.UInt16 => "uint16",
+        NumberType.UInt32 => "uint32",
+        NumberType.UInt64 => "uint64",
+        NumberType.Float32 => "float32",
+        NumberType.Float64 => "float64",
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
+
     public NumberType NumberType { get; } = type;
 
     public bool CanImplicitlyConvert(NumberType to)

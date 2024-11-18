@@ -32,7 +32,7 @@ public class InferenceNodeVisitor(SemanticHandler semanticHandler) : BaseNodeVis
         else if (variableDeclarationNode.Value is EnumShortHandNode enumShortHandNode)
         {
             // we need to infer the type of the enum shorthand
-            if (variableDeclarationNode.TypeInfo == null)
+            if (variableDeclarationNode.TypeInfoNode == null)
             {
                 throw new CompileError.SemanticError(
                     "enum shorthand needs a type",

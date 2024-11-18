@@ -5,13 +5,25 @@ using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
 
-public abstract class BaseNode(NodeContext nodeContext)
+public abstract class BaseNode
 {
-    public TypeRef TypeRef { get; set; } = new(TypeInfo.Unknown);
+    private TypeRef _typeRef;
+
+    protected BaseNode(NodeContext nodeContext)
+    {
+        NodeContext = nodeContext;
+        TypeRef = new TypeRef(TypeInfo.Unknown);
+    }
+
+    public TypeRef TypeRef
+    {
+        get => _typeRef;
+        set => SetTypeRef(value);
+    }
 
     public Scope? Scope { get; set; }
 
-    public NodeContext NodeContext { get; } = nodeContext;
+    public NodeContext NodeContext { get; }
 
     public virtual TypeRef ReturnedTypeRef => TypeRef;
 
@@ -20,5 +32,10 @@ public abstract class BaseNode(NodeContext nodeContext)
     public virtual void Accept(INodeVisitor nodeVisitor)
     {
         throw new NotImplementedException();
+    }
+
+    protected virtual void SetTypeRef(TypeRef typeRef)
+    {
+        _typeRef = typeRef;
     }
 }

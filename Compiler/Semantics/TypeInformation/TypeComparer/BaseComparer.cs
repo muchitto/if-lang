@@ -51,7 +51,9 @@ public abstract class BaseComparer : ITypeComparer
 
     public virtual bool CompareNumberTypeInfo(NumberTypeInfo typeInfo, TypeInfo other)
     {
-        return other is NumberTypeInfo numberTypeInfo && typeInfo.NumberType == numberTypeInfo.NumberType;
+        return other is NumberTypeInfo otherNumberTypeInfo
+               && typeInfo.NumberType == otherNumberTypeInfo.NumberType
+               && otherNumberTypeInfo.NumberType == typeInfo.NumberType;
     }
 
     public virtual bool CompareBooleanTypeInfo(BooleanTypeInfo typeInfo, TypeInfo other)

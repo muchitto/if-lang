@@ -93,7 +93,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         VisitNode(variableDeclarationNode.Named);
         VisitNode(variableDeclarationNode.Value);
-        VisitNode(variableDeclarationNode.TypeInfo);
+        VisitNode(variableDeclarationNode.TypeInfoNode);
         VisitNodes(variableDeclarationNode.Annotations);
         return variableDeclarationNode;
     }
@@ -193,6 +193,16 @@ public abstract class BaseNodeVisitor : INodeVisitor
     public virtual AnnotationNode VisitAnnotationNode(AnnotationNode annotationNode)
     {
         return annotationNode;
+    }
+
+    [StackTraceHidden]
+    [DebuggerHidden]
+    public virtual TypeCastNode VisitTypeCastNode(TypeCastNode typeCastNode)
+    {
+        typeCastNode.FromTypeInfoName.Accept(this);
+        typeCastNode.ToTypeInfoName.Accept(this);
+
+        return typeCastNode;
     }
 
     [StackTraceHidden]
@@ -446,7 +456,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual DeclarationNamedNode VisitDeclarationNameNode(DeclarationNamedNode declarationNamedNode)
     {
-        VisitNameNode(declarationNamedNode);
+        VisitNamedNode(declarationNamedNode);
         return declarationNamedNode;
     }
 
@@ -471,13 +481,13 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ReferenceNamedNode VisitReferenceNameNode(ReferenceNamedNode referenceNamedNode)
     {
-        VisitNameNode(referenceNamedNode);
+        VisitNamedNode(referenceNamedNode);
         return referenceNamedNode;
     }
 
     [StackTraceHidden]
     [DebuggerHidden]
-    public virtual NamedNode VisitNameNode(NamedNode namedNode)
+    public virtual NamedNode VisitNamedNode(NamedNode namedNode)
     {
         VisitNodes(namedNode.GenericParameters);
         return namedNode;

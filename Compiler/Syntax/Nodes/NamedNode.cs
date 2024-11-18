@@ -12,7 +12,7 @@ public class NamedNode(NodeContext nodeContext, string name, List<TypeInfoNode> 
 
     public override void Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitNameNode(this);
+        nodeVisitor.VisitNamedNode(this);
     }
 
     public TypeInfoNameNode ToTypeInfoNameNode()

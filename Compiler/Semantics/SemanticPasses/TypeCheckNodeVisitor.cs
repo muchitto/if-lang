@@ -85,19 +85,41 @@ public class TypeCheckNodeVisitor(SemanticHandler semanticHandler)
             return base.VisitVariableDeclarationNode(variableDeclarationNode);
         }
 
-        if (variableDeclarationNode.Value.TypeRef.TypeInfo is NumberTypeInfo numberTypeInfo
-            && numberTypeInfo.CanImplicitlyConvert(numberTypeInfo.NumberType))
+        if (variableDeclarationNode.Value.TypeRef.TypeInfo is NumberTypeInfo valueNumberTypeInfo
+            && valueNumberTypeInfo.CanImplicitlyConvert(valueNumberTypeInfo.NumberType)
+            && !variableDeclarationNode.Value.TypeRef.Compare(variableDeclarationNode.TypeRef))
         {
-            //   throw new NotImplementedException();
+            if (variableDeclarationNode.TypeRef.TypeInfo is not NumberTypeInfo variableNumberTypeInfo)
+            {
+                throw new CompileError.SemanticError(
+                    "the variable type is not a number",
+                    variableDeclarationNode
+                );
+            }
+
+            var typeCastNode = variableDeclarationNode.CastValue(
+                valueNumberTypeInfo,
+                variableNumberTypeInfo
+            );
+
+            new TypeResolutionNodeVisitor(semanticHandler).VisitTypeCastNode(typeCastNode);
         }
 
         if (
-            (variableDeclarationNode.TypeInfo != null &&
-             !variableDeclarationNode.TypeInfo.TypeRef.Compare(variableDeclarationNode.Value))
+            (variableDeclarationNode.TypeInfoNode != null &&
+             !variableDeclarationNode.TypeInfoNode.TypeRef.Compare(variableDeclarationNode.Value))
             || !variableDeclarationNode.TypeRef.Compare(variableDeclarationNode.Value))
         {
             throw new CompileError.SemanticError(
                 "the variable type and value does not match",
+                variableDeclarationNode
+            );
+        }
+
+        if (!variableDeclarationNode.TypeRef.Compare(variableDeclarationNode.Value))
+        {
+            throw new CompileError.SemanticError(
+                "variable value type does not match the type of the variable",
                 variableDeclarationNode
             );
         }

@@ -2,6 +2,8 @@ namespace Compiler.Semantics.TypeInformation.Types;
 
 public class UnknownTypeInfo : FoundationalTypeInfo
 {
+    public override string? TypeName => "unknown";
+
     public override string ToString()
     {
         return "unknown";

@@ -5,6 +5,8 @@ public class FunctionTypeInfo(TypeRef returnType, List<FunctionTypeInfoParameter
     public TypeRef ReturnType { get; } = returnType;
     public List<FunctionTypeInfoParameter> Parameters { get; } = parameters;
 
+    public override string? TypeName => null;
+
     public override string ToString()
     {
         return $"Function() -> {ReturnType}";

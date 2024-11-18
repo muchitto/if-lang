@@ -133,8 +133,7 @@ public class SemanticTest : CompilationTest
             var i : float64[] = []
             var j : bool[] = []
         ";
-
-
+        
         var program = Parser.Parse("UsingBaseTypesAsArrayTypes", source);
 
         SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());

@@ -5,6 +5,8 @@ namespace Compiler.Semantics.TypeInformation.Types;
 public class AnonymousEnumTypeInfo(Scope scope, Dictionary<string, TypeRef> fields)
     : AbstractStructuralTypeInfo(scope, fields)
 {
+    public override string? TypeName => null;
+
     public override void Accept(ITypeInfoVisitor typeInfoVisitor)
     {
         typeInfoVisitor.VisitAnonymousEnumTypeInfo(this);

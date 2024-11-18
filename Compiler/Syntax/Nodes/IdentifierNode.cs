@@ -1,3 +1,4 @@
+using Compiler.Semantics.TypeInformation;
 using Compiler.Syntax.Nodes.TypeInfoNodes;
 using Compiler.Syntax.Visitor;
 

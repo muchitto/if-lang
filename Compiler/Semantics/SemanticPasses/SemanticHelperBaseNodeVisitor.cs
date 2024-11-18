@@ -9,7 +9,7 @@ public abstract class SemanticHelperBaseNodeVisitor(SemanticHandler semanticHand
 {
     public Scope? CurrentScope => SemanticContext.CurrentScope;
 
-    public bool InGlobalScope => CurrentScope?.Parent == null;
+    public bool InGlobalScope => CurrentScope?.Parent == null || CurrentScope.AttachedNode is ProgramNode;
 
     public bool CanSetAlreadyDeclaredSymbol => InGlobalScope || SemanticHandler.InScopeType(ScopeType.Object);
 

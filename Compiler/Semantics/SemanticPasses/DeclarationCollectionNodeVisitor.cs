@@ -32,8 +32,6 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
 
             var name = objectDeclarationNode.Named.Name;
 
-            objectDeclarationNode.Named.TypeRef = new TypeRef(TypeInfo.Unknown);
-
             var fields = new Dictionary<string, TypeRef>();
             objectDeclarationNode.TypeRef.TypeInfo =
                 new ObjectTypeInfo(objectScope, baseTypeRef, name, fields);
@@ -52,6 +50,13 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
 
                 fields.Add(functionDeclaration.Named.Name, functionDeclaration.TypeRef);
             }
+
+            objectDeclarationNode.TypeRef.TypeInfo = new ObjectTypeInfo(
+                CurrentScope,
+                objectDeclarationNode.BaseName?.TypeRef,
+                name,
+                fields
+            );
         }
 
         PopObjectDeclarationNode();
@@ -76,11 +81,11 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
     {
         var name = variableDeclarationNode.Named.Name;
 
-        if (variableDeclarationNode.TypeInfo != null)
+        if (variableDeclarationNode.TypeInfoNode != null)
         {
-            VisitTypeInfoNode(variableDeclarationNode.TypeInfo);
+            VisitTypeInfoNode(variableDeclarationNode.TypeInfoNode);
 
-            variableDeclarationNode.TypeRef = variableDeclarationNode.TypeInfo.TypeRef;
+            variableDeclarationNode.TypeRef = variableDeclarationNode.TypeInfoNode.TypeRef;
         }
 
         if (variableDeclarationNode.Value != null)
@@ -137,6 +142,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
         var functionTypeInfo = new FunctionTypeInfo(returnTypeRef, parameters);
 
         functionDeclarationNode.TypeRef.TypeInfo = functionTypeInfo;
+        
 
         SemanticHandler.SetSymbol(
             new Symbol(name, CurrentScope, functionDeclarationNode, SymbolType.Identifier),
@@ -179,7 +185,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
                 }
             }
 
-            base.VisitProgramNode(programNode);
+            VisitNodes(programNode.Declarations);
         }
 
         return programNode;

@@ -99,9 +99,11 @@ public interface INodeVisitor
 
     public ReferenceNamedNode VisitReferenceNameNode(ReferenceNamedNode referenceNamedNode);
 
-    public NamedNode VisitNameNode(NamedNode namedNode);
+    public NamedNode VisitNamedNode(NamedNode namedNode);
 
     public NullLiteralNode VisitNullLiteralNode(NullLiteralNode nullLiteralNode);
 
     public IdentifiableNode VisitIdentifiableNode(IdentifiableNode identifiableNode);
+
+    public TypeCastNode VisitTypeCastNode(TypeCastNode typeCastNode);
 }

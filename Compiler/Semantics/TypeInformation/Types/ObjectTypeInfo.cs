@@ -13,6 +13,8 @@ public class ObjectTypeInfo(
     public TypeRef? BaseClass { get; } = baseClass;
     public string Name { get; } = name;
 
+    public override string TypeName => Name;
+
     public override string ToString()
     {
         return Name;

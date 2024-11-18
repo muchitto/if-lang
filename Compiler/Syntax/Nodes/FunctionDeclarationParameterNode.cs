@@ -1,3 +1,4 @@
+using Compiler.Semantics.TypeInformation;
 using Compiler.Syntax.Nodes.TypeInfoNodes;
 using Compiler.Syntax.Visitor;
 
@@ -21,5 +22,12 @@ public class FunctionDeclarationParameterNode(
     public override string ToString()
     {
         return Named + " : " + TypeInfoNode;
+    }
+
+    protected override void SetTypeRef(TypeRef typeRef)
+    {
+        base.SetTypeRef(typeRef);
+
+        Named.TypeRef = typeRef;
     }
 }
