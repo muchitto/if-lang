@@ -1,5 +1,7 @@
 using Compiler.ErrorHandling;
 using Compiler.Parsing;
+using Compiler.Semantics;
+using Compiler.Semantics.SemanticPasses;
 
 namespace Compiler.Tests;
 
@@ -15,5 +17,12 @@ public abstract class CompilationTest
         var compilationContext = CreateCompilationContext(testName, source);
 
         return new Parser(compilationContext);
+    }
+
+    protected void RunSemanticTest(string testName, string source)
+    {
+        var program = Parser.Parse("TypeCrossReferencesInVariables", source);
+
+        SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());
     }
 }

@@ -238,7 +238,7 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
 
         if (SemanticHandler.TryLookupIdentifier(identifierNode.Name, out var symbol))
         {
-            if (symbol.TypeRef.TypeInfo.IsUnknown)
+            if (symbol.TypeRef.TypeInfo.IsUnknown && symbol.Node is not VariableDeclarationNode)
             {
                 VisitBaseNode(symbol.Node);
             }

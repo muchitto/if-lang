@@ -1,7 +1,3 @@
-using Compiler.Parsing;
-using Compiler.Semantics;
-using Compiler.Semantics.SemanticPasses;
-
 namespace Compiler.Tests.Semantics;
 
 public class SemanticTest : CompilationTest
@@ -19,16 +15,7 @@ public class SemanticTest : CompilationTest
             }
         ";
 
-        try
-        {
-            var program = Parser.Parse("TypeCrossReferencesInVariables", source);
-
-            SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());
-        }
-        catch (Exception e)
-        {
-            Assert.Fail(e.Message);
-        }
+        RunSemanticTest("TypeCrossReferencesInVariables", source);
     }
 
     [Fact]
@@ -48,9 +35,7 @@ public class SemanticTest : CompilationTest
             }
         ";
 
-        var program = Parser.Parse("TypeCrossReferencesInFunctionReturns", source);
-
-        SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());
+        RunSemanticTest("TypeCrossReferencesInFunctionReturns", source);
     }
 
     [Fact]
@@ -68,9 +53,7 @@ public class SemanticTest : CompilationTest
             }
         ";
 
-        var program = Parser.Parse("TypeCrossReferencesInFunctionParameters", source);
-
-        SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());
+        RunSemanticTest("TypeCrossReferencesInFunctionParameters", source);
     }
 
     [Fact]
@@ -91,9 +74,7 @@ public class SemanticTest : CompilationTest
             }
         ";
 
-        var program = Parser.Parse("TypeCrossReferencesAndAccess", source);
-
-        SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());
+        RunSemanticTest("TypeCrossReferencesAndAccess", source);
     }
 
     [Fact]
@@ -107,14 +88,12 @@ public class SemanticTest : CompilationTest
             var e : uint32 = 0
             var f : uint64 = 0
             var g : float = 0
-            var h : float32 = 0
+            var h : float32 = 0.0
             var i : float64 = 0
             var j : bool = false
         ";
 
-        var program = Parser.Parse("UsingBaseTypes", source);
-
-        SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());
+        RunSemanticTest("UsingBaseTypes", source);
     }
 
 
@@ -133,9 +112,39 @@ public class SemanticTest : CompilationTest
             var i : float64[] = []
             var j : bool[] = []
         ";
-        
-        var program = Parser.Parse("UsingBaseTypesAsArrayTypes", source);
 
-        SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());
+        RunSemanticTest("UsingBaseTypesAsArrayTypes", source);
+    }
+
+    [Fact]
+    public void UsingBaseTypeAsArrayTypeWithValueInferred()
+    {
+        var source = @"
+            var a = [10]
+        ";
+
+        RunSemanticTest("UsingBaseTypeAsArrayTypeWithValueInferred", source);
+    }
+
+    [Fact]
+    public void UsingAnotherVariableToInferTheTypeOfAnother()
+    {
+        var source = @"
+            var a = 1
+            var b = a
+        ";
+
+        RunSemanticTest("UsingAnotherVariableToInferTheTypeOfAnother", source);
+    }
+
+    [Fact]
+    public void AccessingArrayAndInferringTheType()
+    {
+        var source = @"
+            var a = [10]
+            var p = a[0]
+        ";
+
+        RunSemanticTest("AccessingArrayAndInferringTheType", source);
     }
 }
