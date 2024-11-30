@@ -8,7 +8,7 @@ public class TypeResolutionScopeHandler(SemanticHandler semanticHandler) : BaseS
     {
         if (SemanticHandler.InScopeType(ScopeType.Function) || baseNode is BodyBlockNode)
         {
-            return SemanticHandler.NewScope(ScopeType.Function, baseNode);
+            return SemanticHandler.NewScope(scopeType, baseNode);
         }
 
         return SemanticHandler.RecallNodeScope(baseNode);

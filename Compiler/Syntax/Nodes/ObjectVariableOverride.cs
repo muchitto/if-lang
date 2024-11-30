@@ -5,10 +5,10 @@ namespace Compiler.Syntax.Nodes;
 public class ObjectVariableOverride(NodeContext nodeContext, DeclarationNamedNode named, BaseNode value)
     : DeclarationNode(nodeContext, named, [])
 {
-    public BaseNode Value { get; } = value;
+    public BaseNode Value { get; set; } = value;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitObjectVariableOverride(this);
+        return nodeVisitor.VisitObjectVariableOverride(this);
     }
 }

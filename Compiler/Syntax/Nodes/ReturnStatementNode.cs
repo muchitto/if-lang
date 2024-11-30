@@ -4,10 +4,10 @@ namespace Compiler.Syntax.Nodes;
 
 public class ReturnStatementNode(NodeContext nodeContext, BaseNode? value) : BaseNode(nodeContext)
 {
-    public BaseNode? Value { get; } = value;
+    public BaseNode? Value { get; set; } = value;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitReturnStatementNode(this);
+        return nodeVisitor.VisitReturnStatementNode(this);
     }
 }

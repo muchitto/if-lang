@@ -6,10 +6,10 @@ namespace Compiler.Syntax.Nodes;
 public class ExternVariableNode(NodeContext nodeContext, DeclarationNamedNode named, TypeInfoNode typeInfoNode)
     : ExternNode(nodeContext, named)
 {
-    public TypeInfoNode TypeInfoNode { get; } = typeInfoNode;
+    public TypeInfoNode TypeInfoNode { get; set; } = typeInfoNode;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitExternVariableNode(this);
+        return nodeVisitor.VisitExternVariableNode(this);
     }
 }

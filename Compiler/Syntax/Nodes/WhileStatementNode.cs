@@ -5,11 +5,11 @@ namespace Compiler.Syntax.Nodes;
 public class WhileStatementNode(NodeContext nodeContext, BaseNode expression, BodyBlockNode body)
     : BaseNode(nodeContext)
 {
-    public BaseNode Expression { get; } = expression;
-    public BodyBlockNode Body { get; } = body;
+    public BaseNode Expression { get; set; } = expression;
+    public BodyBlockNode Body { get; set; } = body;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitWhileNode(this);
+        return nodeVisitor.VisitWhileNode(this);
     }
 }

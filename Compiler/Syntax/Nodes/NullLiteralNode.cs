@@ -4,8 +4,8 @@ namespace Compiler.Syntax.Nodes;
 
 public class NullLiteralNode(NodeContext nodeContext) : LiteralNode(nodeContext)
 {
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitNullLiteralNode(this);
+        return nodeVisitor.VisitNullLiteralNode(this);
     }
 }

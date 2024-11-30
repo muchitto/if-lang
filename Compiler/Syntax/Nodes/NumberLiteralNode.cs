@@ -6,9 +6,9 @@ public class NumberLiteralNode(NodeContext nodeContext, string number) : Literal
 {
     public string Number { get; } = number;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitNumberLiteralNode(this);
+        return nodeVisitor.VisitNumberLiteralNode(this);
     }
 
     public bool IsFloat()

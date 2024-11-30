@@ -9,8 +9,8 @@ public abstract class DeclarationNode(
 )
     : BaseNode(nodeContext), IEquatable<BaseNode>
 {
-    public List<AnnotationNode> Annotations { get; } = annotationNodes;
-    public DeclarationNamedNode Named { get; } = named;
+    public List<AnnotationNode> Annotations { get; set; } = annotationNodes;
+    public DeclarationNamedNode Named { get; set; } = named;
 
     public virtual bool Equals(BaseNode? other)
     {

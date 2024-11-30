@@ -14,15 +14,15 @@ public class VariableDeclarationNode(
 )
     : DeclarationNode(nodeContext, named, annotationNodes)
 {
-    public TypeInfoNode? TypeInfoNode { get; } = typeInfoNode;
-    public BaseNode? Value { get; private set; } = value;
+    public TypeInfoNode? TypeInfoNode { get; set; } = typeInfoNode;
+    public BaseNode? Value { get; set; } = value;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitVariableDeclarationNode(this);
+        return nodeVisitor.VisitVariableDeclarationNode(this);
     }
 
-    public TypeCastNode CastValue(TypeInfo from, TypeInfo to)
+    public override TypeCastNode CastValue(TypeInfo from, TypeInfo to)
     {
         if (Value == null)
         {
@@ -32,28 +32,7 @@ public class VariableDeclarationNode(
             );
         }
 
-        if (from.TypeName == null || to.TypeName == null)
-        {
-            throw new CompileError.SemanticError(
-                $"cannot cast value from type {from} to {to}",
-                NodeContext
-            );
-        }
-
-        var typeCastNode = new TypeCastNode(
-            Value.NodeContext,
-            new TypeInfoNameNode(
-                NodeContext,
-                from.TypeName,
-                []
-            ),
-            new TypeInfoNameNode(
-                NodeContext,
-                to.TypeName,
-                []
-            )
-        );
-        ;
+        var typeCastNode = base.CastValue(from, to);
 
         Value = typeCastNode;
 

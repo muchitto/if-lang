@@ -65,7 +65,9 @@ public class InferenceNodeVisitor(SemanticHandler semanticHandler) : BaseNodeVis
         {
             foreach (var field in structureLiteralNode.Fields)
             {
-                if (!structureTypeInfo.Fields.TryGetValue(field.Name.Name, out var typeRef))
+                var typeInfoField = structureTypeInfo.GetField(field.Name.Name);
+
+                if (typeInfoField is null)
                 {
                     throw new CompileError.SemanticError(
                         "field not found",
@@ -94,7 +96,9 @@ public class InferenceNodeVisitor(SemanticHandler semanticHandler) : BaseNodeVis
             );
         }
 
-        if (!structureTypeInfo.Fields.TryGetValue(structureLiteralFieldNode.Name.Name, out var typeRef))
+        var field = structureTypeInfo.GetField(structureLiteralFieldNode.Name.Name);
+
+        if (field is not { TypeRef: var typeRef })
         {
             throw new CompileError.SemanticError(
                 "field not found",

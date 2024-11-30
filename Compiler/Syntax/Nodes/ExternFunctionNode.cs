@@ -12,8 +12,8 @@ public class ExternFunctionNode(
 ) : ExternNode(nodeContext, named), IEquatable<BaseNode>
 {
     public List<TypeInfoNode> GenericParameters { get; } = genericParameters;
-    public List<FunctionDeclarationParameterNode> ParameterNodes { get; } = parameterNodes;
-    public TypeInfoNode? ReturnType { get; } = returnType;
+    public List<FunctionDeclarationParameterNode> ParameterNodes { get; set; } = parameterNodes;
+    public TypeInfoNode? ReturnType { get; set; } = returnType;
 
     public bool Equals(BaseNode? other)
     {
@@ -45,8 +45,8 @@ public class ExternFunctionNode(
         return ReturnType.Equals(externFunctionNode.ReturnType);
     }
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitExternFunctionNode(this);
+        return nodeVisitor.VisitExternFunctionNode(this);
     }
 }

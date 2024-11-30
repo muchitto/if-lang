@@ -5,8 +5,8 @@ namespace Compiler.Syntax.Nodes;
 public class ArrayAccessNode(NodeContext nodeContext, BaseNode array, BaseNode accessor)
     : BaseNode(nodeContext), IEquatable<BaseNode>
 {
-    public BaseNode Array { get; } = array;
-    public BaseNode Accessor { get; } = accessor;
+    public BaseNode Array { get; set; } = array;
+    public BaseNode Accessor { get; set; } = accessor;
 
     public bool Equals(BaseNode? other)
     {
@@ -15,8 +15,8 @@ public class ArrayAccessNode(NodeContext nodeContext, BaseNode array, BaseNode a
                Accessor.Equals(arrayAccessNode.Accessor);
     }
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitArrayAccessNode(this);
+        return nodeVisitor.VisitArrayAccessNode(this);
     }
 }

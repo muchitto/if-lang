@@ -90,7 +90,7 @@ public abstract class BaseComparer : ITypeComparer
             }
         }
 
-        return typeInfo.Compare(this, other);
+        return true;
     }
 
     public virtual bool CompareDeferredTypeInfo(DeferredTypeInfo typeInfo, TypeInfo other)
@@ -107,10 +107,11 @@ public abstract class BaseComparer : ITypeComparer
 
         // In structures, the order of fields is not important, we only care about that the fields found in
         // this is one is also found in the other, it doesn't matter if the other has more fields
-        foreach (var (key, value) in typeInfo.Fields)
+        foreach (var typeInfoField in typeInfo.Fields)
         {
-            if (!structureTypeInfo.Fields.TryGetValue(key, out var otherValue) ||
-                !Compare(value.TypeInfo, otherValue.TypeInfo))
+            var field = structureTypeInfo.GetField(typeInfoField.Name);
+
+            if (field == null || !Compare(field.TypeRef.TypeInfo, field.TypeRef.TypeInfo))
             {
                 return false;
             }
@@ -133,8 +134,8 @@ public abstract class BaseComparer : ITypeComparer
 
         for (var i = 0; i < typeInfo.Fields.Count; i++)
         {
-            var ourItem = typeInfo.Fields.ElementAt(i).Value;
-            var theirItem = enumTypeInfo.Fields.ElementAt(i).Value;
+            var ourItem = typeInfo.Fields[i].TypeRef;
+            var theirItem = enumTypeInfo.Fields[i].TypeRef;
 
             if (!Compare(ourItem.TypeInfo, theirItem.TypeInfo))
             {
@@ -154,10 +155,10 @@ public abstract class BaseComparer : ITypeComparer
 
         for (var i = 0; i < typeInfo.Parameters.Count; i++)
         {
-            var ourParam = typeInfo.Parameters.ElementAt(i);
-            var theirParam = enumItemTypeInfo.Parameters.ElementAt(i);
+            var ourParam = typeInfo.Parameters[i].TypeRef;
+            var theirParam = enumItemTypeInfo.Parameters[i].TypeRef;
 
-            if (!Compare(ourParam.Value.TypeInfo, theirParam.Value.TypeInfo))
+            if (!Compare(ourParam.TypeInfo, theirParam.TypeInfo))
             {
                 return false;
             }
@@ -176,10 +177,10 @@ public abstract class BaseComparer : ITypeComparer
 
         for (var i = 0; i < typeInfo.Items.Count; i++)
         {
-            var ourItem = typeInfo.Items.ElementAt(i);
-            var theirItem = inlineEnumTypeInfo.Items.ElementAt(i);
+            var ourItem = typeInfo.Items[i].TypeRef;
+            var theirItem = inlineEnumTypeInfo.Items[i].TypeRef;
 
-            if (Compare(ourItem.Value.TypeInfo, theirItem.Value.TypeInfo))
+            if (Compare(ourItem.TypeInfo, theirItem.TypeInfo))
             {
                 return true;
             }
@@ -195,10 +196,10 @@ public abstract class BaseComparer : ITypeComparer
             return false;
         }
 
-        foreach (var (name, value) in typeInfo.Fields)
+        foreach (var typeInfoField in typeInfo.Fields)
         {
-            if (otherAnonymousTypeInfo.Fields.TryGetValue(name, out var otherField)
-                && value.TypeInfo.Compare(this, otherField.TypeInfo))
+            var field = otherAnonymousTypeInfo.GetField(typeInfoField.Name);
+            if (field != null && typeInfoField.TypeRef.TypeInfo.Compare(this, field.TypeRef.TypeInfo))
             {
                 continue;
             }

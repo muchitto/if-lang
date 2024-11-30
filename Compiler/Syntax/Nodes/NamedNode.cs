@@ -8,11 +8,11 @@ public class NamedNode(NodeContext nodeContext, string name, List<TypeInfoNode> 
 {
     public string Name { get; } = name;
 
-    public List<TypeInfoNode> GenericParameters { get; } = genericParameters;
+    public List<TypeInfoNode> GenericParameters { get; set; } = genericParameters;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitNamedNode(this);
+        return nodeVisitor.VisitNamedNode(this);
     }
 
     public TypeInfoNameNode ToTypeInfoNameNode()

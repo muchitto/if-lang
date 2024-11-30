@@ -15,8 +15,8 @@ public class AnnotationNode(NodeContext nodeContext, IdentifierNode name, List<B
                Arguments.SequenceEqual(annotationNode.Arguments);
     }
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitAnnotationNode(this);
+        return nodeVisitor.VisitAnnotationNode(this);
     }
 }

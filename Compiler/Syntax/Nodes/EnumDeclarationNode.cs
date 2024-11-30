@@ -9,10 +9,10 @@ public class EnumDeclarationNode(
     List<AnnotationNode> annotationNodes
 ) : DeclarationNode(nodeContext, named, annotationNodes)
 {
-    public List<EnumDeclarationItemNode> Items { get; } = items;
+    public List<EnumDeclarationItemNode> Items { get; set; } = items;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitEnumDeclarationNode(this);
+        return nodeVisitor.VisitEnumDeclarationNode(this);
     }
 }

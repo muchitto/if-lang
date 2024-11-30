@@ -11,10 +11,10 @@ public class TypeInfoArrayNode(
 {
     public List<TypeInfoNode> GenericParameters { get; } = genericParameters;
 
-    public TypeInfoNode BaseType { get; } = baseType;
+    public TypeInfoNode BaseType { get; set; } = baseType;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitTypeInfoArrayNode(this);
+        return nodeVisitor.VisitTypeInfoArrayNode(this);
     }
 }

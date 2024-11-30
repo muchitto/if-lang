@@ -9,8 +9,8 @@ public class ExpressionNode(NodeContext nodeContext, BaseNode left, BaseNode rig
     public Operator Operator = op;
     public BaseNode Right = right;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitExpressionNode(this);
+        return nodeVisitor.VisitExpressionNode(this);
     }
 }

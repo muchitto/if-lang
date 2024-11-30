@@ -46,8 +46,7 @@ public class NumberTypeInfo(NumberType type) : FoundationalTypeInfo
     };
 
     public override string? TypeName => StringToNumberType.First(v => v.Value == NumberType).Key;
-
-
+    
     public NumberType NumberType { get; } = type;
 
     public bool CanImplicitlyConvert(NumberType to)

@@ -5,7 +5,7 @@ namespace Compiler.Syntax.Nodes;
 public class StructureLiteralNode(NodeContext nodeContext, List<StructureLiteralFieldNode> fields)
     : LiteralNode(nodeContext)
 {
-    public List<StructureLiteralFieldNode> Fields { get; } = fields;
+    public List<StructureLiteralFieldNode> Fields { get; set; } = fields;
 
 
     public bool HasField(string name)
@@ -13,8 +13,8 @@ public class StructureLiteralNode(NodeContext nodeContext, List<StructureLiteral
         return Fields.Any(f => f.Name.Name == name);
     }
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitStructureLiteralNode(this);
+        return nodeVisitor.VisitStructureLiteralNode(this);
     }
 }

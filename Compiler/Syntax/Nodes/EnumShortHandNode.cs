@@ -5,12 +5,12 @@ namespace Compiler.Syntax.Nodes;
 public class EnumShortHandNode(NodeContext nodeContext, DeclarationNamedNode named, List<BaseNode> parameters)
     : BaseNode(nodeContext)
 {
-    public DeclarationNamedNode Named { get; } = named;
+    public DeclarationNamedNode Named { get; set; } = named;
 
-    public List<BaseNode> Parameters { get; } = parameters;
+    public List<BaseNode> Parameters { get; set; } = parameters;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitEnumShortHandNode(this);
+        return nodeVisitor.VisitEnumShortHandNode(this);
     }
 }

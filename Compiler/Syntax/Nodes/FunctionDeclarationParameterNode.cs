@@ -11,12 +11,12 @@ public class FunctionDeclarationParameterNode(
 )
     : BaseNode(nodeContext)
 {
-    public DeclarationNamedNode Named { get; } = named;
-    public TypeInfoNode TypeInfoNode { get; } = typeInfoNode;
+    public DeclarationNamedNode Named { get; set; } = named;
+    public TypeInfoNode TypeInfoNode { get; set; } = typeInfoNode;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitFunctionDeclarationParameterNode(this);
+        return nodeVisitor.VisitFunctionDeclarationParameterNode(this);
     }
 
     public override string ToString()

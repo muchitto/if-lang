@@ -5,11 +5,11 @@ namespace Compiler.Syntax.Nodes;
 public class StructureLiteralFieldNode(NodeContext nodeContext, IdentifierNode name, BaseNode field)
     : LiteralNode(nodeContext)
 {
-    public IdentifierNode Name { get; } = name;
-    public BaseNode Field { get; } = field;
+    public IdentifierNode Name { get; set; } = name;
+    public BaseNode Field { get; set; } = field;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitStructureLiteralFieldNode(this);
+        return nodeVisitor.VisitStructureLiteralFieldNode(this);
     }
 }

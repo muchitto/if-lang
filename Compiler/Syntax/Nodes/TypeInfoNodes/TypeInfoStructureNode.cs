@@ -4,14 +4,14 @@ namespace Compiler.Syntax.Nodes.TypeInfoNodes;
 
 public class TypeInfoStructureNode(
     NodeContext nodeContext,
-    Dictionary<string, TypeInfoNode> fields
+    List<TypeInfoStructureField> fields
 )
     : TypeInfoNode(nodeContext)
 {
-    public Dictionary<string, TypeInfoNode> Fields { get; } = fields;
+    public List<TypeInfoStructureField> Fields { get; set; } = fields;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitTypeInfoStructureNode(this);
+        return nodeVisitor.VisitTypeInfoStructureNode(this);
     }
 }

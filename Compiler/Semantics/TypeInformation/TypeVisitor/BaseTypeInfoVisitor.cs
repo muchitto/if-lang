@@ -9,7 +9,7 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
 
     public virtual ObjectTypeInfo VisitObjectTypeInfo(ObjectTypeInfo objectTypeInfo)
     {
-        VisitTypeRefs(objectTypeInfo.Fields.Values);
+        VisitTypeRefs(objectTypeInfo.Fields);
         return objectTypeInfo;
     }
 
@@ -25,7 +25,7 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
 
     public virtual StructureTypeInfo VisitStructureTypeInfo(StructureTypeInfo structureTypeInfo)
     {
-        VisitTypeRefs(structureTypeInfo.Fields.Values);
+        VisitTypeRefs(structureTypeInfo.Fields);
         return structureTypeInfo;
     }
 
@@ -80,7 +80,7 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
     public virtual FunctionTypeInfo VisitFunctionTypeInfo(FunctionTypeInfo functionTypeInfo)
     {
         VisitTypeRef(functionTypeInfo.ReturnType);
-        VisitTypeRefs(functionTypeInfo.Parameters.Select(p => p.TypeRef));
+        VisitTypeRefs(functionTypeInfo.Parameters);
         return functionTypeInfo;
     }
 
@@ -91,13 +91,13 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
 
     public virtual InlineEnumTypeInfo VisitInlineEnumTypeInfo(InlineEnumTypeInfo inlineEnumTypeInfo)
     {
-        VisitTypeRefs(inlineEnumTypeInfo.Items.Values);
+        VisitTypeRefs(inlineEnumTypeInfo.Items);
         return inlineEnumTypeInfo;
     }
 
     public virtual EnumItemTypeInfo VisitEnumItemTypeInfo(EnumItemTypeInfo enumItemTypeInfo)
     {
-        VisitTypeRefs(enumItemTypeInfo.Parameters.Values);
+        VisitTypeRefs(enumItemTypeInfo.Parameters);
         return enumItemTypeInfo;
     }
 
@@ -114,9 +114,16 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
         };
     }
 
+    public AbstractStructuralFieldTypeInfo VisitAbstractStructuralFieldTypeInfo(
+        AbstractStructuralFieldTypeInfo abstractStructuralFieldTypeInfo
+    )
+    {
+        throw new NotImplementedException();
+    }
+
     public virtual AnonymousEnumTypeInfo VisitAnonymousEnumTypeInfo(AnonymousEnumTypeInfo anonymousEnumTypeInfo)
     {
-        VisitTypeRefs(anonymousEnumTypeInfo.Fields.Values);
+        VisitTypeRefs(anonymousEnumTypeInfo.Fields);
         return anonymousEnumTypeInfo;
     }
 
@@ -156,6 +163,16 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
         foreach (var typeRef in typeRefs)
         {
             VisitTypeRef(typeRef);
+        }
+    }
+
+    [DebuggerHidden]
+    [StackTraceHidden]
+    private void VisitTypeRefs(IEnumerable<NameTypeRefData> typeRefDatas)
+    {
+        foreach (var nameTypeRefData in typeRefDatas)
+        {
+            VisitTypeRef(nameTypeRefData.TypeRef);
         }
     }
 }

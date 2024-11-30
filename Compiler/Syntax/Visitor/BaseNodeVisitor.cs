@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using Compiler.Semantics;
 using Compiler.Semantics.ScopeHandling;
 using Compiler.Syntax.Nodes;
@@ -35,8 +36,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual BaseNode VisitBaseNode(BaseNode baseNode)
     {
-        baseNode.Accept(this);
-        return baseNode;
+        return baseNode.Accept(this);
     }
 
     [StackTraceHidden]
@@ -45,7 +45,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         using (EnterScope(ScopeType.Program, programNode))
         {
-            VisitNodes(programNode.Declarations);
+            programNode.Declarations = VisitNodes(programNode.Declarations);
         }
 
         return programNode;
@@ -64,7 +64,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         using (EnterScope(ScopeType.BodyBlock, bodyBlockNode))
         {
-            VisitNodes(bodyBlockNode.Statements);
+            bodyBlockNode.Statements = VisitNodes(bodyBlockNode.Statements);
         }
 
         return bodyBlockNode;
@@ -83,7 +83,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
         FunctionCallArgumentNode functionCallArgumentNode
     )
     {
-        VisitNode(functionCallArgumentNode.Value);
+        functionCallArgumentNode.Value = VisitNode(functionCallArgumentNode.Value);
+
         return functionCallArgumentNode;
     }
 
@@ -91,10 +92,10 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual VariableDeclarationNode VisitVariableDeclarationNode(VariableDeclarationNode variableDeclarationNode)
     {
-        VisitNode(variableDeclarationNode.Named);
-        VisitNode(variableDeclarationNode.Value);
-        VisitNode(variableDeclarationNode.TypeInfoNode);
-        VisitNodes(variableDeclarationNode.Annotations);
+        variableDeclarationNode.Named = VisitNode(variableDeclarationNode.Named);
+        variableDeclarationNode.Value = VisitNode(variableDeclarationNode.Value);
+        variableDeclarationNode.TypeInfoNode = VisitNode(variableDeclarationNode.TypeInfoNode);
+        variableDeclarationNode.Annotations = VisitNodes(variableDeclarationNode.Annotations);
         return variableDeclarationNode;
     }
 
@@ -111,13 +112,13 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         using (EnterScope(ScopeType.Function, functionDeclarationNode))
         {
-            VisitNode(functionDeclarationNode.Named);
-            VisitNodes(functionDeclarationNode.Annotations);
-            VisitNodes(functionDeclarationNode.ParameterNodes);
-            VisitNode(functionDeclarationNode.Body);
+            functionDeclarationNode.Named = VisitNode(functionDeclarationNode.Named);
+            functionDeclarationNode.Annotations = VisitNodes(functionDeclarationNode.Annotations);
+            functionDeclarationNode.ParameterNodes = VisitNodes(functionDeclarationNode.ParameterNodes);
+            functionDeclarationNode.Body = VisitNode(functionDeclarationNode.Body);
         }
 
-        VisitNode(functionDeclarationNode.ReturnTypeInfo);
+        functionDeclarationNode.ReturnTypeInfo = VisitNode(functionDeclarationNode.ReturnTypeInfo);
         return functionDeclarationNode;
     }
 
@@ -125,7 +126,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual FunctionCallNode VisitFunctionCallNode(FunctionCallNode functionCallNode)
     {
-        VisitNodes(functionCallNode.Parameters);
+        functionCallNode.Parameters = VisitNodes(functionCallNode.Parameters);
         return functionCallNode;
     }
 
@@ -133,8 +134,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ExpressionNode VisitExpressionNode(ExpressionNode expressionNode)
     {
-        VisitNode(expressionNode.Left);
-        VisitNode(expressionNode.Right);
+        expressionNode.Left = VisitNode(expressionNode.Left);
+        expressionNode.Right = VisitNode(expressionNode.Right);
         return expressionNode;
     }
 
@@ -144,10 +145,10 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         using (EnterScope(ScopeType.Object, objectDeclarationNode))
         {
-            VisitNode(objectDeclarationNode.Named);
-            VisitNode(objectDeclarationNode.BaseName);
-            VisitNodes(objectDeclarationNode.Annotations);
-            VisitNodes(objectDeclarationNode.Fields);
+            objectDeclarationNode.Named = VisitNode(objectDeclarationNode.Named);
+            objectDeclarationNode.BaseName = VisitNode(objectDeclarationNode.BaseName);
+            objectDeclarationNode.Annotations = VisitNodes(objectDeclarationNode.Annotations);
+            objectDeclarationNode.Fields = VisitNodes(objectDeclarationNode.Fields);
         }
 
         return objectDeclarationNode;
@@ -159,8 +160,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
         FunctionDeclarationParameterNode functionDeclarationParameterNode
     )
     {
-        VisitNode(functionDeclarationParameterNode.Named);
-        VisitNode(functionDeclarationParameterNode.TypeInfoNode);
+        functionDeclarationParameterNode.Named = VisitNode(functionDeclarationParameterNode.Named);
+        functionDeclarationParameterNode.TypeInfoNode = VisitNode(functionDeclarationParameterNode.TypeInfoNode);
         return functionDeclarationParameterNode;
     }
 
@@ -175,9 +176,9 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual IfStatementNode VisitIfStatementNode(IfStatementNode ifStatementNode)
     {
-        VisitNode(ifStatementNode.Expression);
-        VisitNode(ifStatementNode.Body);
-        VisitNode(ifStatementNode.NextIf);
+        ifStatementNode.Expression = VisitNode(ifStatementNode.Expression);
+        ifStatementNode.Body = VisitNode(ifStatementNode.Body);
+        ifStatementNode.NextIf = VisitNode(ifStatementNode.NextIf);
         return ifStatementNode;
     }
 
@@ -199,18 +200,27 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual TypeCastNode VisitTypeCastNode(TypeCastNode typeCastNode)
     {
-        typeCastNode.FromTypeInfoName.Accept(this);
-        typeCastNode.ToTypeInfoName.Accept(this);
+        typeCastNode.FromTypeInfoName = VisitNode(typeCastNode.FromTypeInfoName);
+        typeCastNode.ToTypeInfoName = VisitNode(typeCastNode.ToTypeInfoName);
 
         return typeCastNode;
     }
 
     [StackTraceHidden]
     [DebuggerHidden]
+    public ObjectInitializationNode VisitObjectInitializationNode(ObjectInitializationNode objectInitializationNode)
+    {
+        objectInitializationNode.Parameters = VisitNodes(objectInitializationNode.Parameters);
+        return objectInitializationNode;
+    }
+
+
+    [StackTraceHidden]
+    [DebuggerHidden]
     public virtual WhileStatementNode VisitWhileNode(WhileStatementNode whileStatementNode)
     {
-        VisitNode(whileStatementNode.Expression);
-        VisitNode(whileStatementNode.Body);
+        whileStatementNode.Expression = VisitNode(whileStatementNode.Expression);
+        whileStatementNode.Body = VisitNode(whileStatementNode.Body);
         return whileStatementNode;
     }
 
@@ -218,9 +228,9 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ForStatementNode VisitForStatementNode(ForStatementNode forStatementNode)
     {
-        VisitNode(forStatementNode.Iteratable);
-        VisitNode(forStatementNode.Value);
-        VisitNode(forStatementNode.Body);
+        forStatementNode.Iteratable = VisitNode(forStatementNode.Iteratable);
+        forStatementNode.Value = VisitNode(forStatementNode.Value);
+        forStatementNode.Body = VisitNode(forStatementNode.Body);
         return forStatementNode;
     }
 
@@ -228,7 +238,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ReturnStatementNode VisitReturnStatementNode(ReturnStatementNode returnStatementNode)
     {
-        VisitNode(returnStatementNode.Value);
+        returnStatementNode.Value = VisitNode(returnStatementNode.Value);
         return returnStatementNode;
     }
 
@@ -250,24 +260,23 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual DeclarationNode VisitDeclarationNode(DeclarationNode declarationNode)
     {
-        VisitNode(declarationNode);
-        return declarationNode;
+        return VisitNode(declarationNode);
     }
 
     [StackTraceHidden]
     [DebuggerHidden]
     public virtual TypeInfoNode VisitTypeInfoNode(TypeInfoNode typeInfoNode)
     {
-        VisitNode(typeInfoNode);
-        return typeInfoNode;
+        return VisitNode(typeInfoNode);
     }
 
     [StackTraceHidden]
     [DebuggerHidden]
     public virtual AssignmentNode VisitAssignmentNode(AssignmentNode assignmentNode)
     {
-        VisitNode(assignmentNode.Name);
-        VisitNode(assignmentNode.Value);
+        assignmentNode.Name = VisitNode(assignmentNode.Name);
+        assignmentNode.Value = VisitNode(assignmentNode.Value);
+
         return assignmentNode;
     }
 
@@ -275,8 +284,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual MemberAccessNode VisitMemberAccessNode(MemberAccessNode memberAccessNode)
     {
-        VisitNode(memberAccessNode.BaseObject);
-        VisitNode(memberAccessNode.Member);
+        memberAccessNode.BaseObject = VisitNode(memberAccessNode.BaseObject);
+        memberAccessNode.Member = VisitNode(memberAccessNode.Member);
         return memberAccessNode;
     }
 
@@ -284,7 +293,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual TypeInfoArrayNode VisitTypeInfoArrayNode(TypeInfoArrayNode typeInfoArrayNode)
     {
-        VisitNode(typeInfoArrayNode.BaseType);
+        typeInfoArrayNode.BaseType = VisitNode(typeInfoArrayNode.BaseType);
+
         return typeInfoArrayNode;
     }
 
@@ -294,7 +304,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         using (EnterScope(ScopeType.Object, typeInfoStructureNode))
         {
-            VisitNodes(typeInfoStructureNode.Fields.Values);
+            typeInfoStructureNode.Fields = VisitNodes(typeInfoStructureNode.Fields);
         }
 
         return typeInfoStructureNode;
@@ -306,7 +316,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     {
         using (EnterScope(ScopeType.Object, structureLiteralNode))
         {
-            VisitNodes(structureLiteralNode.Fields);
+            structureLiteralNode.Fields = VisitNodes(structureLiteralNode.Fields);
         }
 
         return structureLiteralNode;
@@ -317,7 +327,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ArrayLiteralNode VisitArrayLiteralNode(ArrayLiteralNode arrayLiteralNode)
     {
-        VisitNodes(arrayLiteralNode.Elements);
+        arrayLiteralNode.Elements = VisitNodes(arrayLiteralNode.Elements);
         return arrayLiteralNode;
     }
 
@@ -325,8 +335,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual EnumDeclarationNode VisitEnumDeclarationNode(EnumDeclarationNode enumDeclarationNode)
     {
-        VisitNodes(enumDeclarationNode.Annotations);
-        VisitNodes(enumDeclarationNode.Items);
+        enumDeclarationNode.Annotations = VisitNodes(enumDeclarationNode.Annotations);
+        enumDeclarationNode.Items = VisitNodes(enumDeclarationNode.Items);
         return enumDeclarationNode;
     }
 
@@ -334,7 +344,6 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual LiteralNode VisitLiteralNode(LiteralNode literalNode)
     {
-        VisitNode(literalNode);
         return literalNode;
     }
 
@@ -344,8 +353,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
         StructureLiteralFieldNode structureLiteralFieldNode
     )
     {
-        VisitNode(structureLiteralFieldNode.Name);
-        VisitNode(structureLiteralFieldNode.Field);
+        structureLiteralFieldNode.Name = VisitNode(structureLiteralFieldNode.Name);
+        structureLiteralFieldNode.Field = VisitNode(structureLiteralFieldNode.Field);
         return structureLiteralFieldNode;
     }
 
@@ -353,8 +362,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual EnumShortHandNode VisitEnumShortHandNode(EnumShortHandNode enumShortHandNode)
     {
-        VisitNode(enumShortHandNode.Named);
-        VisitNodes(enumShortHandNode.Parameters);
+        enumShortHandNode.Named = VisitNode(enumShortHandNode.Named);
+        enumShortHandNode.Parameters = VisitNodes(enumShortHandNode.Parameters);
         return enumShortHandNode;
     }
 
@@ -362,8 +371,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ObjectVariableOverride VisitObjectVariableOverride(ObjectVariableOverride objectVariableOverride)
     {
-        VisitNode(objectVariableOverride.Named);
-        VisitNode(objectVariableOverride.Value);
+        objectVariableOverride.Named = VisitNode(objectVariableOverride.Named);
+        objectVariableOverride.Value = VisitNode(objectVariableOverride.Value);
         return objectVariableOverride;
     }
 
@@ -371,7 +380,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual UnaryExpressionNode VisitUnaryExpressionNode(UnaryExpressionNode unaryExpressionNode)
     {
-        VisitNode(unaryExpressionNode.Value);
+        unaryExpressionNode.Value = VisitNode(unaryExpressionNode.Value);
         return unaryExpressionNode;
     }
 
@@ -379,7 +388,6 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ExternNode VisitExternNode(ExternNode externNode)
     {
-        VisitNode(externNode);
         return externNode;
     }
 
@@ -387,9 +395,9 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ExternFunctionNode VisitExternFunctionNode(ExternFunctionNode externFunctionNode)
     {
-        VisitNode(externFunctionNode.Named);
-        VisitNodes(externFunctionNode.ParameterNodes);
-        VisitNode(externFunctionNode.ReturnType);
+        externFunctionNode.Named = VisitNode(externFunctionNode.Named);
+        externFunctionNode.ParameterNodes = VisitNodes(externFunctionNode.ParameterNodes);
+        externFunctionNode.ReturnType = VisitNode(externFunctionNode.ReturnType);
         return externFunctionNode;
     }
 
@@ -397,8 +405,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ExternVariableNode VisitExternVariableNode(ExternVariableNode externVariableNode)
     {
-        VisitNode(externVariableNode.Named);
-        VisitNode(externVariableNode.TypeInfoNode);
+        externVariableNode.Named = VisitNode(externVariableNode.Named);
+        externVariableNode.TypeInfoNode = VisitNode(externVariableNode.TypeInfoNode);
         return externVariableNode;
     }
 
@@ -408,8 +416,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
         EnumDeclarationItemParameterNode enumDeclarationItemParameterNode
     )
     {
-        VisitNode(enumDeclarationItemParameterNode.Named);
-        VisitNode(enumDeclarationItemParameterNode.TypeInfoNode);
+        enumDeclarationItemParameterNode.Named = VisitNode(enumDeclarationItemParameterNode.Named);
+        enumDeclarationItemParameterNode.TypeInfoNode = VisitNode(enumDeclarationItemParameterNode.TypeInfoNode);
         return enumDeclarationItemParameterNode;
     }
 
@@ -417,8 +425,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual EnumDeclarationItemNode VisitEnumDeclarationItemNode(EnumDeclarationItemNode enumDeclarationItemNode)
     {
-        VisitNode(enumDeclarationItemNode.Named);
-        VisitNodes(enumDeclarationItemNode.ParameterNodes);
+        enumDeclarationItemNode.Named = VisitNode(enumDeclarationItemNode.Named);
+        enumDeclarationItemNode.ParameterNodes = VisitNodes(enumDeclarationItemNode.ParameterNodes);
         return enumDeclarationItemNode;
     }
 
@@ -428,7 +436,7 @@ public abstract class BaseNodeVisitor : INodeVisitor
         TypeInfoAnonymousEnumNode typeInfoAnonymousEnumNode
     )
     {
-        VisitNodes(typeInfoAnonymousEnumNode.Fields);
+        typeInfoAnonymousEnumNode.Fields = VisitNodes(typeInfoAnonymousEnumNode.Fields);
         return typeInfoAnonymousEnumNode;
     }
 
@@ -438,8 +446,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
         TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode
     )
     {
-        VisitNode(typeInfoEnumFieldParamNode.Named);
-        VisitNode(typeInfoEnumFieldParamNode.TypeInfoNode);
+        typeInfoEnumFieldParamNode.Named = VisitNode(typeInfoEnumFieldParamNode.Named);
+        typeInfoEnumFieldParamNode.TypeInfoNode = VisitNode(typeInfoEnumFieldParamNode.TypeInfoNode);
         return typeInfoEnumFieldParamNode;
     }
 
@@ -447,8 +455,9 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual TypeInfoEnumFieldNode VisitTypeInfoEnumFieldNode(TypeInfoEnumFieldNode typeInfoEnumFieldNode)
     {
-        VisitNode(typeInfoEnumFieldNode.Named);
-        VisitNodes(typeInfoEnumFieldNode.Parameters);
+        typeInfoEnumFieldNode.Named = VisitNode(typeInfoEnumFieldNode.Named);
+        typeInfoEnumFieldNode.Parameters = VisitNodes(typeInfoEnumFieldNode.Parameters);
+
         return typeInfoEnumFieldNode;
     }
 
@@ -456,7 +465,6 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual DeclarationNamedNode VisitDeclarationNameNode(DeclarationNamedNode declarationNamedNode)
     {
-        VisitNamedNode(declarationNamedNode);
         return declarationNamedNode;
     }
 
@@ -464,8 +472,9 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ArrayAccessNode VisitArrayAccessNode(ArrayAccessNode arrayAccessNode)
     {
-        VisitNode(arrayAccessNode.Array);
-        VisitNode(arrayAccessNode.Accessor);
+        arrayAccessNode.Array = VisitNode(arrayAccessNode.Array);
+        arrayAccessNode.Accessor = VisitNode(arrayAccessNode.Accessor);
+
         return arrayAccessNode;
     }
 
@@ -473,7 +482,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual OptionalTypeInfoNode VisitOptionalTypeInfoNode(OptionalTypeInfoNode optionalTypeInfoNode)
     {
-        VisitNode(optionalTypeInfoNode.TypeInfo);
+        optionalTypeInfoNode.TypeInfo = VisitNode(optionalTypeInfoNode.TypeInfo);
+
         return optionalTypeInfoNode;
     }
 
@@ -481,7 +491,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual ReferenceNamedNode VisitReferenceNameNode(ReferenceNamedNode referenceNamedNode)
     {
-        VisitNamedNode(referenceNamedNode);
+        referenceNamedNode.GenericParameters = VisitNodes(referenceNamedNode.GenericParameters);
+
         return referenceNamedNode;
     }
 
@@ -489,7 +500,8 @@ public abstract class BaseNodeVisitor : INodeVisitor
     [DebuggerHidden]
     public virtual NamedNode VisitNamedNode(NamedNode namedNode)
     {
-        VisitNodes(namedNode.GenericParameters);
+        namedNode.GenericParameters = VisitNodes(namedNode.GenericParameters);
+
         return namedNode;
     }
 
@@ -509,19 +521,18 @@ public abstract class BaseNodeVisitor : INodeVisitor
 
     [StackTraceHidden]
     [DebuggerHidden]
-    protected void VisitNode(BaseNode? node)
+    [Pure]
+    protected T? VisitNode<T>(T? node) where T : BaseNode
     {
-        node?.Accept(this);
+        return (T)node?.Accept(this);
     }
 
     [StackTraceHidden]
     [DebuggerHidden]
-    protected void VisitNodes(IEnumerable<BaseNode> nodes)
+    [Pure]
+    protected List<T> VisitNodes<T>(IEnumerable<T> nodes) where T : BaseNode
     {
-        foreach (var node in nodes)
-        {
-            node.Accept(this);
-        }
+        return nodes.Select(node => (T)node.Accept(this)).ToList();
     }
 
     protected ActionItemDisposable<Scope> EnterScope(ScopeType scopeType, BaseNode baseNode)

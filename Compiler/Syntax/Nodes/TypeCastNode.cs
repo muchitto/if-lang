@@ -10,8 +10,8 @@ public class TypeCastNode(NodeContext nodeContext, TypeInfoNameNode fromTypeInfo
 
     public TypeInfoNameNode ToTypeInfoName = toTypeInfoName;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitTypeCastNode(this);
+        return nodeVisitor.VisitTypeCastNode(this);
     }
 }

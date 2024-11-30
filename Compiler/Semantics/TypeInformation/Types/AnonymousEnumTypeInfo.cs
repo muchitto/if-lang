@@ -2,7 +2,7 @@ using Compiler.Semantics.ScopeHandling;
 
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class AnonymousEnumTypeInfo(Scope scope, Dictionary<string, TypeRef> fields)
+public class AnonymousEnumTypeInfo(Scope scope, List<AbstractStructuralFieldTypeInfo> fields)
     : AbstractStructuralTypeInfo(scope, fields)
 {
     public override string? TypeName => null;

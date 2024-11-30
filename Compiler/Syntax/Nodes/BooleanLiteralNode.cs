@@ -6,8 +6,8 @@ public class BooleanLiteralNode(NodeContext nodeContext, bool value) : LiteralNo
 {
     public bool Value { get; } = value;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitBooleanLiteralNode(this);
+        return nodeVisitor.VisitBooleanLiteralNode(this);
     }
 }

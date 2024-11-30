@@ -6,8 +6,8 @@ public abstract class IdentifiableNode(NodeContext nodeContext) : BaseNode(nodeC
 {
     public abstract string GetName();
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitIdentifiableNode(this);
+        return nodeVisitor.VisitIdentifiableNode(this);
     }
 }

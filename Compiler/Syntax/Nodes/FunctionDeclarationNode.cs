@@ -1,4 +1,3 @@
-using Compiler.Semantics.TypeInformation;
 using Compiler.Syntax.Nodes.TypeInfoNodes;
 using Compiler.Syntax.Visitor;
 
@@ -14,18 +13,17 @@ public class FunctionDeclarationNode(
 )
     : DeclarationNode(nodeContext, named, annotationNodes)
 {
-    public List<FunctionDeclarationParameterNode> ParameterNodes { get; } = parameterNodes;
-    public TypeInfoNode? ReturnTypeInfo { get; } = returnTypeInfo;
-    public BodyBlockNode Body { get; } = body;
+    public List<FunctionDeclarationParameterNode> ParameterNodes { get; set; } = parameterNodes;
+    public TypeInfoNode? ReturnTypeInfo { get; set; } = returnTypeInfo;
+    public BodyBlockNode Body { get; set; } = body;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitFunctionDeclarationNode(this);
+        return nodeVisitor.VisitFunctionDeclarationNode(this);
     }
 
     public override string ToString()
     {
         return $"func {Named} (" + string.Join(", ", ParameterNodes) + ")" + ReturnTypeInfo;
     }
-
 }

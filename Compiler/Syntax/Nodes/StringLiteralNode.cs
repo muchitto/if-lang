@@ -6,8 +6,8 @@ public class StringLiteralNode(NodeContext nodeContext, string value) : LiteralN
 {
     public string Value { get; } = value;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitStringLiteralNode(this);
+        return nodeVisitor.VisitStringLiteralNode(this);
     }
 }

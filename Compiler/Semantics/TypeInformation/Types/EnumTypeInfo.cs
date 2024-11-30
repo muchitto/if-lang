@@ -2,7 +2,7 @@ using Compiler.Semantics.ScopeHandling;
 
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class EnumTypeInfo(Scope scope, string name, Dictionary<string, TypeRef> fields)
+public class EnumTypeInfo(Scope scope, string name, List<AbstractStructuralFieldTypeInfo> fields)
     : AbstractStructuralTypeInfo(scope, fields)
 {
     public override string? TypeName => Name;

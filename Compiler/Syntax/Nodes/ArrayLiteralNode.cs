@@ -5,7 +5,7 @@ namespace Compiler.Syntax.Nodes;
 public class ArrayLiteralNode(NodeContext nodeContext, List<BaseNode> elements)
     : LiteralNode(nodeContext), IEquatable<BaseNode>
 {
-    public List<BaseNode> Elements { get; } = elements;
+    public List<BaseNode> Elements { get; set; } = elements;
 
     public bool Equals(BaseNode? other)
     {
@@ -13,8 +13,8 @@ public class ArrayLiteralNode(NodeContext nodeContext, List<BaseNode> elements)
                Elements.SequenceEqual(arrayLiteralNode.Elements);
     }
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitArrayLiteralNode(this);
+        return nodeVisitor.VisitArrayLiteralNode(this);
     }
 }

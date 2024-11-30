@@ -6,9 +6,9 @@ public class FunctionCallArgumentNode(NodeContext nodeContext, BaseNode value) :
 {
     public BaseNode Value = value;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitFunctionCallArgumentNode(this);
+        return nodeVisitor.VisitFunctionCallArgumentNode(this);
     }
 
     public override string ToString()

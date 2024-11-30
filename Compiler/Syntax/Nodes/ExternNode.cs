@@ -15,8 +15,8 @@ public abstract class ExternNode(NodeContext nodeContext, DeclarationNamedNode n
         return other is ExternNode;
     }
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitExternNode(this);
+        return nodeVisitor.VisitExternNode(this);
     }
 }

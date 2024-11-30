@@ -10,7 +10,7 @@ public class TypeInfoAnonymousEnumNode(
     List<TypeInfoEnumFieldNode> fields
 ) : TypeInfoNode(nodeContext), IEquatable<BaseNode>
 {
-    public List<TypeInfoEnumFieldNode> Fields { get; } = fields;
+    public List<TypeInfoEnumFieldNode> Fields { get; set; } = fields;
 
     public bool Equals(BaseNode? other)
     {
@@ -18,8 +18,8 @@ public class TypeInfoAnonymousEnumNode(
                Fields.SequenceEqual(anonymousEnumTypeInfoNode.Fields);
     }
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitTypeInfoAnonymousEnumNode(this);
+        return nodeVisitor.VisitTypeInfoAnonymousEnumNode(this);
     }
 }

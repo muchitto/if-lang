@@ -1,5 +1,5 @@
 ﻿namespace VM;
 
-public class VM
+public class Vm
 {
 }

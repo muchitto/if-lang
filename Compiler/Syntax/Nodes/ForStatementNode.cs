@@ -5,12 +5,12 @@ namespace Compiler.Syntax.Nodes;
 public class ForStatementNode(NodeContext nodeContext, BaseNode iteratable, IdentifierNode value, BodyBlockNode body)
     : BaseNode(nodeContext)
 {
-    public BaseNode Iteratable { get; } = iteratable;
-    public IdentifierNode Value { get; } = value;
-    public BodyBlockNode Body { get; } = body;
+    public BaseNode Iteratable { get; set; } = iteratable;
+    public IdentifierNode Value { get; set; } = value;
+    public BodyBlockNode Body { get; set; } = body;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitForStatementNode(this);
+        return nodeVisitor.VisitForStatementNode(this);
     }
 }

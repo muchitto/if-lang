@@ -6,8 +6,8 @@ namespace Compiler.Syntax.Nodes;
 public class ReferenceNamedNode(NodeContext nodeContext, string name, List<TypeInfoNode> genericParameters)
     : NamedNode(nodeContext, name, genericParameters)
 {
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitReferenceNameNode(this);
+        return nodeVisitor.VisitReferenceNameNode(this);
     }
 }

@@ -943,9 +943,11 @@ public class Parser(CompilationContext context)
             return ParseTypeInfoPart(typeName);
         }
 
+        var structureNodeContext = new NodeContext(PeekToken().PositionData);
+
         if (IsNextEat(TokenType.Symbol, "{"))
         {
-            var fields = new Dictionary<string, TypeInfoNode>();
+            var fields = new List<TypeInfoStructureField>();
 
             while (!IsNext(TokenType.Symbol, "}"))
             {
@@ -955,7 +957,7 @@ public class Parser(CompilationContext context)
 
                 var fieldType = ParseTypeInfo();
 
-                fields.Add(fieldName.Name, fieldType);
+                fields.Add(new TypeInfoStructureField(fieldName.NodeContext, fieldName.Name, fieldType));
 
                 if (IsNextEat(TokenType.Symbol, ","))
                 {
@@ -966,9 +968,6 @@ public class Parser(CompilationContext context)
             }
 
             ExpectEatValue(TokenType.Symbol, "}");
-
-            var structureNodeContext =
-                new NodeContext(fields.First().Value.NodeContext, fields.Last().Value.NodeContext);
 
             return ParseTypeInfoPart(new TypeInfoStructureNode(structureNodeContext, fields));
         }

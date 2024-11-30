@@ -1,8 +1,8 @@
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class InlineEnumTypeInfo(Dictionary<string, TypeRef> items) : TypeInfo
+public class InlineEnumTypeInfo(List<InlineEnumItemTypeInfo> items) : TypeInfo
 {
-    public Dictionary<string, TypeRef> Items { get; } = items;
+    public List<InlineEnumItemTypeInfo> Items { get; } = items;
 
     public override string? TypeName => null;
 

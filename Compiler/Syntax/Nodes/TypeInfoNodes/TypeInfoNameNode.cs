@@ -11,9 +11,9 @@ public class TypeInfoNameNode(NodeContext nodeContext, string name, List<TypeInf
     public List<TypeInfoNode> GenericParameters { get; } = genericParameters;
 
     [DebuggerHidden]
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitTypeInfoNameNode(this);
+        return nodeVisitor.VisitTypeInfoNameNode(this);
     }
 
     public TypeInfoNameNode WithGenericParameters(List<TypeInfoNode> genericParameters)

@@ -32,23 +32,22 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
 
             var name = objectDeclarationNode.Named.Name;
 
-            var fields = new Dictionary<string, TypeRef>();
+            var fields = new List<AbstractStructuralFieldTypeInfo>();
             objectDeclarationNode.TypeRef.TypeInfo =
                 new ObjectTypeInfo(objectScope, baseTypeRef, name, fields);
 
-            foreach (var variableDeclaration in objectDeclarationNode.Fields.OfType<VariableDeclarationNode>())
+            foreach (var declarationNode in objectDeclarationNode
+                         .Fields
+                         .OrderByDescending(f => f is VariableDeclarationNode))
             {
-                VisitVariableDeclarationNode(variableDeclaration);
+                VisitDeclarationNode(declarationNode);
 
-                fields.Add(variableDeclaration.Named.Name, variableDeclaration.TypeRef);
-            }
-
-
-            foreach (var functionDeclaration in objectDeclarationNode.Fields.OfType<FunctionDeclarationNode>())
-            {
-                VisitFunctionDeclarationNode(functionDeclaration);
-
-                fields.Add(functionDeclaration.Named.Name, functionDeclaration.TypeRef);
+                fields.Add(
+                    new AbstractStructuralFieldTypeInfo(
+                        declarationNode.Named.Name,
+                        declarationNode.TypeRef
+                    )
+                );
             }
 
             objectDeclarationNode.TypeRef.TypeInfo = new ObjectTypeInfo(
@@ -94,7 +93,12 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
         }
 
         SemanticHandler.SetSymbol(
-            new Symbol(name, CurrentScope, variableDeclarationNode, SymbolType.Identifier),
+            new Symbol(
+                name,
+                CurrentScope,
+                variableDeclarationNode,
+                SymbolType.Identifier
+            ),
             true
         );
 
@@ -142,7 +146,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
         var functionTypeInfo = new FunctionTypeInfo(returnTypeRef, parameters);
 
         functionDeclarationNode.TypeRef.TypeInfo = functionTypeInfo;
-        
+
 
         SemanticHandler.SetSymbol(
             new Symbol(name, CurrentScope, functionDeclarationNode, SymbolType.Identifier),
@@ -185,7 +189,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
                 }
             }
 
-            VisitNodes(programNode.Declarations);
+            programNode.Declarations = VisitNodes(programNode.Declarations);
         }
 
         return programNode;
@@ -232,7 +236,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
     {
         Scope enumScope;
         var name = enumDeclarationNode.Named.Name;
-        var items = new Dictionary<string, TypeRef>();
+        var items = new List<AbstractStructuralFieldTypeInfo>();
 
         using (EnterScope(ScopeType.Enum, enumDeclarationNode, out enumScope))
         {
@@ -240,7 +244,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
             {
                 item.Accept(this);
 
-                items.Add(item.Named.Name, item.TypeRef);
+                items.Add(new AbstractStructuralFieldTypeInfo(item.Named.Name, item.TypeRef));
             }
         }
 
@@ -261,16 +265,25 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
 
     public override EnumDeclarationItemNode VisitEnumDeclarationItemNode(EnumDeclarationItemNode enumItemNode)
     {
-        var parameters = new Dictionary<string, TypeRef>();
+        var parameters = new List<EnumItemParameterTypeInfo>();
         foreach (var parameter in enumItemNode.ParameterNodes)
         {
             VisitEnumDeclarationItemParameterNode(parameter);
 
-            parameters.Add(parameter.Named.Name, parameter.TypeRef);
+            parameters.Add(
+                new EnumItemParameterTypeInfo(
+                    parameter.Named.Name,
+                    parameter.TypeRef
+                )
+            );
         }
 
         enumItemNode.TypeRef.TypeInfo =
-            new EnumItemTypeInfo(CurrentScope, enumItemNode.Named.Name, parameters);
+            new EnumItemTypeInfo(
+                CurrentScope,
+                enumItemNode.Named.Name,
+                parameters
+            );
 
         SemanticHandler.SetSymbol(
             new Symbol(enumItemNode.Named.Name, CurrentScope, enumItemNode, SymbolType.Type),

@@ -106,4 +106,6 @@ public interface INodeVisitor
     public IdentifiableNode VisitIdentifiableNode(IdentifiableNode identifiableNode);
 
     public TypeCastNode VisitTypeCastNode(TypeCastNode typeCastNode);
+
+    public ObjectInitializationNode VisitObjectInitializationNode(ObjectInitializationNode objectInitializationNode);
 }

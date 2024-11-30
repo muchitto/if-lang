@@ -90,12 +90,17 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
     {
         using (EnterScope(ScopeType.Enum, typeInfoAnonymousEnumNode, out var scope))
         {
-            var fields = new Dictionary<string, TypeRef>();
+            var fields = new List<AbstractStructuralFieldTypeInfo>();
             foreach (var field in typeInfoAnonymousEnumNode.Fields)
             {
                 VisitTypeInfoNode(field);
 
-                fields.Add(field.Named.Name, field.TypeRef);
+                fields.Add(
+                    new AbstractStructuralFieldTypeInfo(
+                        field.Named.Name,
+                        field.TypeRef
+                    )
+                );
             }
 
             typeInfoAnonymousEnumNode.TypeRef.TypeInfo = new AnonymousEnumTypeInfo(scope, fields);
@@ -107,16 +112,21 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
 
     public override TypeInfoEnumFieldNode VisitTypeInfoEnumFieldNode(TypeInfoEnumFieldNode typeInfoEnumFieldNode)
     {
-        var parameters = new Dictionary<string, TypeRef>();
+        var parameters = new List<EnumItemParameterTypeInfo>();
         foreach (var parameter in typeInfoEnumFieldNode.Parameters)
         {
             VisitTypeInfoNode(parameter);
 
-            parameters.Add(parameter.Named.Name, parameter.TypeRef);
+            parameters.Add(
+                new EnumItemParameterTypeInfo(parameter.Named.Name, parameter.TypeRef)
+            );
         }
 
-        typeInfoEnumFieldNode.TypeRef.TypeInfo = new EnumItemTypeInfo(CurrentScope,
-            typeInfoEnumFieldNode.Named.Name, parameters);
+        typeInfoEnumFieldNode.TypeRef.TypeInfo = new EnumItemTypeInfo(
+            CurrentScope,
+            typeInfoEnumFieldNode.Named.Name,
+            parameters
+        );
 
         return typeInfoEnumFieldNode;
     }
@@ -170,14 +180,6 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
             throw new CompileError.SemanticError(
                 $"could not find the identifier {memberAccessNode.BaseObject.GetName()}",
                 memberAccessNode.BaseObject
-            );
-        }
-
-        if (memberAccessNode.Member.TypeRef.IsUnknown)
-        {
-            throw new CompileError.SemanticError(
-                $"could not find the type of {memberAccessNode.Member.GetName()}",
-                memberAccessNode.Member
             );
         }
 

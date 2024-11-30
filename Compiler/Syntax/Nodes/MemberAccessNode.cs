@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Compiler.Semantics.TypeInformation;
 using Compiler.Syntax.Visitor;
 
 namespace Compiler.Syntax.Nodes;
@@ -12,9 +11,9 @@ public class MemberAccessNode(NodeContext nodeContext, IdentifierNode baseObject
 
     [StackTraceHidden]
     [DebuggerHidden]
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitMemberAccessNode(this);
+        return nodeVisitor.VisitMemberAccessNode(this);
     }
 
     public override string ToString()

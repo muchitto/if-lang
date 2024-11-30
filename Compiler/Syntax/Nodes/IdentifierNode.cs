@@ -1,4 +1,3 @@
-using Compiler.Semantics.TypeInformation;
 using Compiler.Syntax.Nodes.TypeInfoNodes;
 using Compiler.Syntax.Visitor;
 
@@ -13,9 +12,9 @@ public class IdentifierNode(NodeContext nodeContext, string name) : Identifiable
         return Name;
     }
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitIdentifierNode(this);
+        return nodeVisitor.VisitIdentifierNode(this);
     }
 
     public TypeInfoNameNode ToTypeInfoNameNode()

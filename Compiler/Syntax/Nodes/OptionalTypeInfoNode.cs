@@ -10,8 +10,8 @@ public class OptionalTypeInfoNode(
 {
     public TypeInfoNode TypeInfo { get; set; } = typeInfoNode;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitOptionalTypeInfoNode(this);
+        return nodeVisitor.VisitOptionalTypeInfoNode(this);
     }
 }

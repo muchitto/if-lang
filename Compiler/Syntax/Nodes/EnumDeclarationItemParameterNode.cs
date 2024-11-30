@@ -9,11 +9,11 @@ public class EnumDeclarationItemParameterNode(
     TypeInfoNode typeInfoNode
 ) : BaseNode(nodeContext)
 {
-    public DeclarationNamedNode Named { get; } = named;
-    public TypeInfoNode TypeInfoNode { get; } = typeInfoNode;
+    public DeclarationNamedNode Named { get; set; } = named;
+    public TypeInfoNode TypeInfoNode { get; set; } = typeInfoNode;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitEnumDeclarationItemParameterNode(this);
+        return nodeVisitor.VisitEnumDeclarationItemParameterNode(this);
     }
 }

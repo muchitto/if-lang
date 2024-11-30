@@ -9,11 +9,11 @@ public class TypeInfoEnumFieldNode(
 )
     : TypeInfoNode(nodeContext)
 {
-    public DeclarationNamedNode Named { get; } = named;
-    public List<TypeInfoEnumFieldParamNode> Parameters { get; } = parameters;
+    public DeclarationNamedNode Named { get; set; } = named;
+    public List<TypeInfoEnumFieldParamNode> Parameters { get; set; } = parameters;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitTypeInfoEnumFieldNode(this);
+        return nodeVisitor.VisitTypeInfoEnumFieldNode(this);
     }
 }

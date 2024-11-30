@@ -25,7 +25,12 @@ public interface ITypeInfoVisitor
     public EnumItemTypeInfo VisitEnumItemTypeInfo(EnumItemTypeInfo enumItemTypeInfo);
 
     public AbstractStructuralTypeInfo VisitAbstractStructuralTypeInfo(
-        AbstractStructuralTypeInfo abstractStructuralTypeInfo);
+        AbstractStructuralTypeInfo abstractStructuralTypeInfo
+    );
+
+    public AbstractStructuralFieldTypeInfo VisitAbstractStructuralFieldTypeInfo(
+        AbstractStructuralFieldTypeInfo abstractStructuralFieldTypeInfo
+    );
 
     public AnonymousEnumTypeInfo VisitAnonymousEnumTypeInfo(AnonymousEnumTypeInfo anonymousEnumTypeInfo);
 

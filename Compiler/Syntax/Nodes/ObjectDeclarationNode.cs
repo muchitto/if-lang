@@ -12,14 +12,14 @@ public class ObjectDeclarationNode(
 )
     : DeclarationNode(nodeContext, named, annotationNodes)
 {
-    public ReferenceNamedNode? BaseName { get; } = baseName;
-    public List<DeclarationNode> Fields { get; } = fields;
+    public ReferenceNamedNode? BaseName { get; set; } = baseName;
+    public List<DeclarationNode> Fields { get; set; } = fields;
 
     public bool IsImmediatelyInstanced { get; } = isImmediatelyInstanced;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitObjectDeclarationNode(this);
+        return nodeVisitor.VisitObjectDeclarationNode(this);
     }
 
     public override string ToString()

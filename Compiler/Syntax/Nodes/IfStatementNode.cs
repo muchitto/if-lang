@@ -5,9 +5,9 @@ namespace Compiler.Syntax.Nodes;
 public class IfStatementNode(NodeContext nodeContext, BaseNode? expression, BodyBlockNode body, IfStatementNode? nextIf)
     : BaseNode(nodeContext), IEquatable<BaseNode>
 {
-    public BaseNode? Expression { get; } = expression;
-    public BodyBlockNode Body { get; } = body;
-    public IfStatementNode? NextIf { get; } = nextIf;
+    public BaseNode? Expression { get; set; } = expression;
+    public BodyBlockNode Body { get; set; } = body;
+    public IfStatementNode? NextIf { get; set; } = nextIf;
 
     public bool Equals(BaseNode? other)
     {
@@ -17,8 +17,8 @@ public class IfStatementNode(NodeContext nodeContext, BaseNode? expression, Body
                Equals(NextIf, ifStatementNode.NextIf);
     }
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitIfStatementNode(this);
+        return nodeVisitor.VisitIfStatementNode(this);
     }
 }

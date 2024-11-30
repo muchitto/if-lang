@@ -4,10 +4,10 @@ namespace Compiler.Syntax.Nodes;
 
 public class ProgramNode(NodeContext nodeContext, List<DeclarationNode> declarations) : BaseNode(nodeContext)
 {
-    public List<DeclarationNode> Declarations { get; } = declarations;
+    public List<DeclarationNode> Declarations { get; set; } = declarations;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitProgramNode(this);
+        return nodeVisitor.VisitProgramNode(this);
     }
 }

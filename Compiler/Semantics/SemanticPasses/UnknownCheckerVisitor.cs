@@ -256,7 +256,7 @@ public class UnknownCheckerVisitor(SemanticHandler semanticHandler) : BaseNodeVi
         if (objectDeclarationNode.TypeRef.TypeInfo.IsIncomplete)
         {
             throw new CompileError.SemanticError(
-                "object type is incomplete",
+                $"object {objectDeclarationNode.Named.Name} type is incomplete",
                 objectDeclarationNode.NodeContext.PositionData
             );
         }

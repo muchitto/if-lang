@@ -1,5 +1,3 @@
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public record FunctionTypeInfoParameter(string Name, TypeRef TypeRef)
-{
-}
+public class FunctionTypeInfoParameter(string name, TypeRef typeRef) : NameTypeRefData(name, typeRef);

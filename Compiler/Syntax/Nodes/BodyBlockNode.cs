@@ -4,10 +4,10 @@ namespace Compiler.Syntax.Nodes;
 
 public class BodyBlockNode(NodeContext nodeContext, List<BaseNode> statements) : BaseNode(nodeContext)
 {
-    public List<BaseNode> Statements { get; } = statements;
+    public List<BaseNode> Statements { get; set; } = statements;
 
-    public override void Accept(INodeVisitor nodeVisitor)
+    public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        nodeVisitor.VisitBodyBlockNode(this);
+        return nodeVisitor.VisitBodyBlockNode(this);
     }
 }

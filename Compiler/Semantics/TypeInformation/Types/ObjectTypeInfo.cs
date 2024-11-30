@@ -6,7 +6,7 @@ public class ObjectTypeInfo(
     Scope scope,
     TypeRef? baseClass,
     string name,
-    Dictionary<string, TypeRef> fields
+    List<AbstractStructuralFieldTypeInfo> fields
 )
     : AbstractStructuralTypeInfo(scope, fields)
 {
