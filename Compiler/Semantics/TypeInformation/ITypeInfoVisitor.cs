@@ -32,8 +32,6 @@ public interface ITypeInfoVisitor
         AbstractStructuralFieldTypeInfo abstractStructuralFieldTypeInfo
     );
 
-    public AnonymousEnumTypeInfo VisitAnonymousEnumTypeInfo(AnonymousEnumTypeInfo anonymousEnumTypeInfo);
-
     public FoundationalTypeInfo VisitFoundationalTypeInfo(FoundationalTypeInfo foundationalTypeInfo);
 
     public ScopedTypeInfo VisitScopedTypeInfo(ScopedTypeInfo scopedTypeInfo);

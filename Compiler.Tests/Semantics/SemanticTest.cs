@@ -1,3 +1,5 @@
+using Compiler.ErrorHandling;
+
 namespace Compiler.Tests.Semantics;
 
 public class SemanticTest : CompilationTest
@@ -15,7 +17,7 @@ public class SemanticTest : CompilationTest
             }
         ";
 
-        RunSemanticTest("TypeCrossReferencesInVariables", source);
+        RunSemanticTest(source);
     }
 
     [Fact]
@@ -35,7 +37,7 @@ public class SemanticTest : CompilationTest
             }
         ";
 
-        RunSemanticTest("TypeCrossReferencesInFunctionReturns", source);
+        RunSemanticTest(source);
     }
 
     [Fact]
@@ -53,7 +55,8 @@ public class SemanticTest : CompilationTest
             }
         ";
 
-        RunSemanticTest("TypeCrossReferencesInFunctionParameters", source);
+
+        RunSemanticTest(source);
     }
 
     [Fact]
@@ -74,7 +77,7 @@ public class SemanticTest : CompilationTest
             }
         ";
 
-        RunSemanticTest("TypeCrossReferencesAndAccess", source);
+        RunSemanticTest(source);
     }
 
     [Fact]
@@ -93,7 +96,7 @@ public class SemanticTest : CompilationTest
             var j : bool = false
         ";
 
-        RunSemanticTest("UsingBaseTypes", source);
+        RunSemanticTest(source);
     }
 
 
@@ -113,7 +116,7 @@ public class SemanticTest : CompilationTest
             var j : bool[] = []
         ";
 
-        RunSemanticTest("UsingBaseTypesAsArrayTypes", source);
+        RunSemanticTest(source);
     }
 
     [Fact]
@@ -123,7 +126,7 @@ public class SemanticTest : CompilationTest
             var a = [10]
         ";
 
-        RunSemanticTest("UsingBaseTypeAsArrayTypeWithValueInferred", source);
+        RunSemanticTest(source);
     }
 
     [Fact]
@@ -134,7 +137,7 @@ public class SemanticTest : CompilationTest
             var b = a
         ";
 
-        RunSemanticTest("UsingAnotherVariableToInferTheTypeOfAnother", source);
+        RunSemanticTest(source);
     }
 
     [Fact]
@@ -145,6 +148,215 @@ public class SemanticTest : CompilationTest
             var p = a[0]
         ";
 
-        RunSemanticTest("AccessingArrayAndInferringTheType", source);
+        RunSemanticTest(source);
+    }
+
+    [Fact]
+    public void FunctionCallWithAVariable()
+    {
+        var source = @"
+            var a = 10
+            
+            func test(h : int) -> int {
+                return h * h
+            }
+
+            var b = test(a)
+
+            test(b)
+        ";
+
+        RunSemanticTest(source);
+    }
+
+    [Fact]
+    public void ShouldNotMixGeneratedMainFunctionAndAMainFunction()
+    {
+        var source = @"
+            func test() {
+                var hah = 10
+            }
+
+            test()
+
+            func main() {
+                test()
+            }
+        ";
+
+        try
+        {
+            RunSemanticTest(source);
+        }
+        catch (Exception e)
+        {
+            Assert.True(true);
+
+            return;
+        }
+
+        Assert.False(true);
+    }
+
+    [Fact]
+    public void CreateAnInlineEnumAndUseIt()
+    {
+        var source = @"
+            var enumVar : On | Off = .On
+            enumVar = .Off 
+            enumVar = .On
+        ";
+
+        RunSemanticTest(source);
+    }
+
+    [Fact]
+    public void CreateAnEnumDeclarationAndUseIt()
+    {
+        var source = @"
+            enum Switch {
+                On,
+                Off
+            }
+
+            var enumVar : Switch = .On
+            enumVar = .Off 
+            enumVar = .On
+            enumVar = Switch.Off
+        ";
+
+        RunSemanticTest(source);
+    }
+
+    [Fact]
+    public void UsingEnumAndCheckingItInAnIf()
+    {
+        var source = @"
+            enum Switch {
+                On,
+                Off
+            }
+
+            func test() {
+            }
+
+            var enumVar : Switch = .On
+            var enumVar2 : Yes | No = .No
+            
+            if enumVar == .On {
+                test()   
+            }
+
+            if enumVar2 == .Yes {
+                test()
+            }
+        ";
+
+        RunSemanticTest(source);
+    }
+
+
+    [Fact]
+    public void UsingWrongEnumInlineAndDeclaration()
+    {
+        var source = @"
+            enum Switch {
+                On,
+                Off
+            }
+
+            var enumVar : Switch = .O
+            var enumVar2 : Yes | No = .No
+            var enumVar3 : Switch = .On
+
+            enumVar = .Off
+            enumVar2 = .Noo
+            enumVar3 = .Off
+        ";
+
+        try
+        {
+            RunSemanticTest(source);
+        }
+        catch (CompileError.SemanticError error)
+        {
+            return;
+        }
+
+        Assert.Fail("should have failed");
+    }
+
+    [Fact]
+    public void UsingEnumInlineWithArguments()
+    {
+        var source = @"
+            var enumVar : Thing(param : string) | No = .Thing(""Test"")
+            
+            enumVar = .Thing(""no"")
+            enumVar = .No
+        ";
+
+        RunSemanticTest(source);
+    }
+
+    [Fact]
+    public void UsingEnumDeclarationWithArguments()
+    {
+        var source = @"
+            enum Switch {
+                Thing(param : string),
+                No
+            }
+
+            var enumVar : Switch = .Thing(""Test"")
+            enumVar = .Thing(""no"")
+            enumVar = .No 
+        ";
+    }
+
+    [Fact]
+    public void UsingEnumInlineWithWrongTypeOfArguments()
+    {
+        var source = @"
+            var enumVar : Thing(param : string) | No = .No
+            enumVar = .Thing(10)
+        ";
+
+        try
+        {
+            RunSemanticTest(source);
+        }
+        catch (CompileError.SemanticError)
+        {
+            return;
+        }
+
+        Assert.Fail();
+    }
+
+
+    [Fact]
+    public void UsingEnumDeclarationWithWrongTypeOfArguments()
+    {
+        var source = @"
+            enum Switch {
+                Thing(param : string),
+                No
+            }
+
+            var enumVar : Thing(param : string) | No = .No
+            enumVar = .Thing(10)
+        ";
+
+        try
+        {
+            RunSemanticTest(source);
+        }
+        catch (CompileError.SemanticError)
+        {
+            return;
+        }
+
+        Assert.Fail();
     }
 }

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Compiler.Lexing;
 
 namespace Compiler.Tests.Lexing;
@@ -13,7 +14,7 @@ public class LexingTest : CompilationTest
             }
         ";
 
-        var lexer = CreateLexer("ShouldLexSimpleFunction", source);
+        var lexer = CreateLexer(source);
 
         try
         {
@@ -60,7 +61,7 @@ public class LexingTest : CompilationTest
             var a = 1
         ";
 
-        var lexer = CreateLexer("ShouldLexSimpleVariableDeclaration", source);
+        var lexer = CreateLexer(source);
 
         try
         {
@@ -91,7 +92,7 @@ public class LexingTest : CompilationTest
             var b = 2
         ";
 
-        var lexer = CreateLexer("ShouldLexTwoVariableDeclarations", source);
+        var lexer = CreateLexer(source);
 
         try
         {
@@ -127,7 +128,7 @@ public class LexingTest : CompilationTest
             }
         ";
 
-        var lexer = CreateLexer("ShouldLexSimpleClass", source);
+        var lexer = CreateLexer(source);
 
         try
         {
@@ -151,7 +152,49 @@ public class LexingTest : CompilationTest
         }
     }
 
-    private Lexer CreateLexer(string testName, string source)
+    [Fact]
+    public void ShouldLexRandomWhitespacesAndLineBreaks()
+    {
+        var source = @"
+            
+
+            var        test = ""test""
+        var yes =      10
+
+
+
+
+        ";
+
+        var lexer = CreateLexer(source);
+
+        try
+        {
+            var tokens = GetTokenTypeAndValue(lexer);
+
+            Assert.Equal(11, tokens.Length);
+            Assert.Equal(tokens, new[]
+            {
+                (TokenType.NewLine, ""),
+                (TokenType.Keyword, "var"),
+                (TokenType.Identifier, "test"),
+                (TokenType.Symbol, "="),
+                (TokenType.String, "test"),
+                (TokenType.NewLine, ""),
+                (TokenType.Keyword, "var"),
+                (TokenType.Identifier, "yes"),
+                (TokenType.Symbol, "="),
+                (TokenType.Number, "10"),
+                (TokenType.EndOfFile, "")
+            });
+        }
+        catch (Exception e)
+        {
+            Assert.Fail(e.Message);
+        }
+    }
+
+    private Lexer CreateLexer(string source, [CallerMemberName] string testName = "")
     {
         var compilationContext = CreateCompilationContext(testName, source);
 

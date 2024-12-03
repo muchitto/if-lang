@@ -74,6 +74,20 @@ public class Parser(CompilationContext context)
         return PeekToken().Is(type);
     }
 
+    private bool IsNextPossibleFunctionWithoutArguments()
+    {
+        return IsNextOr(TokenType.Number, TokenType.String, TokenType.Identifier);
+    }
+
+    private bool IsNextDeclaration()
+    {
+        return IsNext(TokenType.Keyword, "enum")
+               || IsNext(TokenType.Keyword, "class")
+               || IsNext(TokenType.Keyword, "new")
+               || IsNext(TokenType.Keyword, "func")
+               || IsNext(TokenType.Keyword, "var");
+    }
+
     private bool IsNextOr(params TokenType[] types)
     {
         return types.Contains(PeekToken().Type);
@@ -175,7 +189,7 @@ public class Parser(CompilationContext context)
 
     private bool IsSentenceEnd()
     {
-        return IsNewLine() || IsNext(TokenType.Symbol, ";");
+        return IsNewLine() || IsNext(TokenType.Symbol, ";") || IsNext(TokenType.EndOfFile);
     }
 
     private void ExpectNewLine()
@@ -337,7 +351,7 @@ public class Parser(CompilationContext context)
             return new AssignmentNode(assignmentNodeContext, identifier, value, op);
         }
 
-        if (identifier is not MemberAccessNode { Member: IdentifierNode }
+        if (identifier is not FieldAccessNode { Member: IdentifierNode }
             && !PeekToken().Is(TokenType.NewLine))
         {
             return ParseFunctionCall(identifier);
@@ -348,7 +362,7 @@ public class Parser(CompilationContext context)
 
     private BaseNode ParseBlockStatementOrDeclaration()
     {
-        if (IsNext(TokenType.Keyword, "var") || IsNext(TokenType.Keyword, "func") || IsNext(TokenType.Keyword, "new"))
+        if (IsNextDeclaration())
         {
             return ParseDeclaration();
         }
@@ -881,7 +895,7 @@ public class Parser(CompilationContext context)
     /// </summary>
     /// <param name="firstName"></param>
     /// <returns></returns>
-    private TypeInfoAnonymousEnumNode ParseTypeInfoEnum(IdentifierNode firstName)
+    private TypeInfoInlineEnumNode ParseTypeInfoEnum(IdentifierNode firstName)
     {
         var fields = new List<TypeInfoEnumFieldNode>();
 
@@ -915,7 +929,7 @@ public class Parser(CompilationContext context)
 
         var enumNodeContext = new NodeContext(fields.First().NodeContext, fields.Last().NodeContext);
 
-        return new TypeInfoAnonymousEnumNode(enumNodeContext, fields);
+        return new TypeInfoInlineEnumNode(enumNodeContext, fields);
     }
 
     private TypeInfoNode ParseTypeInfo()
@@ -1187,7 +1201,7 @@ public class Parser(CompilationContext context)
             return ParseMemberAccess(identifier);
         }
 
-        if (IsNextOr(TokenType.Number, TokenType.String, TokenType.Identifier))
+        if (IsNextPossibleFunctionWithoutArguments())
         {
             return ParseFunctionCallWithoutParenthesis(identifier);
         }
@@ -1385,14 +1399,14 @@ public class Parser(CompilationContext context)
         return new FunctionCallNode(functionCallNodeContext, functionName, arguments);
     }
 
-    private MemberAccessNode ParseMemberAccess(IdentifierNode baseObject)
+    private FieldAccessNode ParseMemberAccess(IdentifierNode baseObject)
     {
         while (true)
         {
             IdentifiableNode member = ParseSingleIdentifier();
 
             var memberAccessNodeContext = new NodeContext(baseObject.NodeContext, member.NodeContext);
-            var memberAccess = new MemberAccessNode(memberAccessNodeContext, baseObject, member);
+            var memberAccess = new FieldAccessNode(memberAccessNodeContext, baseObject, member);
 
             if (IsNextEat(TokenType.Symbol, "."))
             {
@@ -1405,7 +1419,7 @@ public class Parser(CompilationContext context)
                 member = ParseFunctionCallWithParentheses(identifierMember);
 
                 memberAccessNodeContext = new NodeContext(baseObject.NodeContext, member.NodeContext);
-                return new MemberAccessNode(memberAccessNodeContext, baseObject, member);
+                return new FieldAccessNode(memberAccessNodeContext, baseObject, member);
             }
 
             return memberAccess;
@@ -1436,7 +1450,7 @@ public class Parser(CompilationContext context)
         return ParseMemberAccess(identifier);
     }
 
-    private DeclarationNode ParseProgramLevelDeclaration()
+    private BaseNode ParseProgramLevelStatement()
     {
         if (IsNextEat(TokenType.Keyword, "extern"))
         {
@@ -1451,20 +1465,21 @@ public class Parser(CompilationContext context)
             return externDeclaration;
         }
 
-        return ParseDeclaration();
+        return ParseBlockStatementOrDeclaration();
     }
 
     public ProgramNode Parse()
     {
         var declarations = new List<DeclarationNode>();
+        var mainFunctionStatements = new List<BaseNode>();
 
         var topLevelDeclarationsOver = false;
 
         while (!IsEnd())
         {
-            var declaration = ParseProgramLevelDeclaration();
+            var statement = ParseProgramLevelStatement();
 
-            if (declaration is ExternNode)
+            if (statement is ExternNode)
             {
                 if (topLevelDeclarationsOver)
                 {
@@ -1476,11 +1491,22 @@ public class Parser(CompilationContext context)
                 topLevelDeclarationsOver = true;
             }
 
-            declarations.Add(declaration);
+            if (statement is DeclarationNode declarationNode)
+            {
+                declarations.Add(declarationNode);
+            }
+            else
+            {
+                mainFunctionStatements.Add(statement);
+            }
         }
 
         var programNodeContext = new NodeContext(declarations.First().NodeContext, declarations.Last().NodeContext);
-        return new ProgramNode(programNodeContext, declarations);
+        return new ProgramNode(
+            programNodeContext,
+            declarations,
+            mainFunctionStatements
+        );
     }
 
     private bool IsEnd()

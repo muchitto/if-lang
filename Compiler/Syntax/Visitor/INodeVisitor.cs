@@ -47,7 +47,7 @@ public interface INodeVisitor
 
     public AssignmentNode VisitAssignmentNode(AssignmentNode assignmentNode);
 
-    public MemberAccessNode VisitMemberAccessNode(MemberAccessNode memberAccessNode);
+    public FieldAccessNode VisitFieldAccessNode(FieldAccessNode fieldAccessNode);
 
     public TypeInfoArrayNode VisitTypeInfoArrayNode(TypeInfoArrayNode typeInfoArrayNode);
 
@@ -82,8 +82,8 @@ public interface INodeVisitor
 
     public EnumDeclarationItemNode VisitEnumDeclarationItemNode(EnumDeclarationItemNode enumDeclarationItemNode);
 
-    public TypeInfoAnonymousEnumNode
-        VisitTypeInfoAnonymousEnumNode(TypeInfoAnonymousEnumNode typeInfoAnonymousEnumNode);
+    public TypeInfoInlineEnumNode
+        VisitTypeInfoInlineEnumNode(TypeInfoInlineEnumNode typeInfoInlineEnumNode);
 
     public TypeInfoEnumFieldParamNode VisitTypeInfoEnumFieldParamNode(
         TypeInfoEnumFieldParamNode typeInfoEnumFieldParamNode
@@ -108,4 +108,8 @@ public interface INodeVisitor
     public TypeCastNode VisitTypeCastNode(TypeCastNode typeCastNode);
 
     public ObjectInitializationNode VisitObjectInitializationNode(ObjectInitializationNode objectInitializationNode);
+
+    public TypeFieldAccessNode VisitTypeFieldAccessNode(TypeFieldAccessNode typeFieldAccessNode);
+
+    public ObjectFieldAccessNode VisitObjectFieldAccessNode(ObjectFieldAccessNode objectFieldAccessNode);
 }

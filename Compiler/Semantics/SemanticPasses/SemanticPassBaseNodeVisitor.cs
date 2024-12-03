@@ -84,14 +84,14 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
         return base.VisitTypeInfoNameNode(typeInfoNameNode);
     }
 
-    public override TypeInfoAnonymousEnumNode VisitTypeInfoAnonymousEnumNode(
-        TypeInfoAnonymousEnumNode typeInfoAnonymousEnumNode
+    public override TypeInfoInlineEnumNode VisitTypeInfoInlineEnumNode(
+        TypeInfoInlineEnumNode typeInfoInlineEnumNode
     )
     {
-        using (EnterScope(ScopeType.Enum, typeInfoAnonymousEnumNode, out var scope))
+        using (EnterScope(ScopeType.Enum, typeInfoInlineEnumNode, out var scope))
         {
             var fields = new List<AbstractStructuralFieldTypeInfo>();
-            foreach (var field in typeInfoAnonymousEnumNode.Fields)
+            foreach (var field in typeInfoInlineEnumNode.Fields)
             {
                 VisitTypeInfoNode(field);
 
@@ -103,10 +103,10 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
                 );
             }
 
-            typeInfoAnonymousEnumNode.TypeRef.TypeInfo = new AnonymousEnumTypeInfo(scope, fields);
+            typeInfoInlineEnumNode.TypeRef.TypeInfo = new InlineEnumTypeInfo(scope, fields);
         }
 
-        return typeInfoAnonymousEnumNode;
+        return typeInfoInlineEnumNode;
     }
 
 
@@ -154,11 +154,11 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
         return base.VisitTypeInfoArrayNode(typeInfoArrayNode);
     }
 
-    public override MemberAccessNode VisitMemberAccessNode(MemberAccessNode memberAccessNode)
+    public override FieldAccessNode VisitFieldAccessNode(FieldAccessNode fieldAccessNode)
     {
-        VisitIdentifierNode(memberAccessNode.BaseObject);
+        VisitIdentifierNode(fieldAccessNode.BaseObjectName);
 
-        if (SemanticHandler.TryLookupIdentifier(memberAccessNode.BaseObject.GetName(),
+        if (SemanticHandler.TryLookupIdentifier(fieldAccessNode.BaseObjectName.GetName(),
                 out var baseObjectIdentifierSymbol)
             && baseObjectIdentifierSymbol.Scope.Parent != null)
         {
@@ -172,20 +172,41 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
 
             using (MustRecallScope(objectTypeInfo.Scope))
             {
-                VisitBaseNode(memberAccessNode.Member);
+                VisitBaseNode(fieldAccessNode.Member);
             }
         }
         else
         {
             throw new CompileError.SemanticError(
-                $"could not find the identifier {memberAccessNode.BaseObject.GetName()}",
-                memberAccessNode.BaseObject
+                $"could not find the identifier {fieldAccessNode.BaseObjectName.GetName()}",
+                fieldAccessNode.BaseObjectName
             );
         }
 
-        memberAccessNode.TypeRef = memberAccessNode.Member.TypeRef;
+        fieldAccessNode.TypeRef = fieldAccessNode.Member.TypeRef;
 
-        return memberAccessNode;
+        return fieldAccessNode;
+    }
+
+    public override TypeFieldAccessNode VisitTypeFieldAccessNode(TypeFieldAccessNode typeFieldAccessNode)
+    {
+        VisitTypeInfoNameNode(typeFieldAccessNode.BaseTypeNode);
+
+        if (typeFieldAccessNode.BaseTypeNode.TypeRef.TypeInfo is not AbstractStructuralTypeInfo
+            baseObjectStructuralTypeInfo)
+        {
+            throw new CompileError.SemanticError(
+                "the base object should be a structural type",
+                typeFieldAccessNode
+            );
+        }
+
+        using (MustRecallScope(baseObjectStructuralTypeInfo.Scope))
+        {
+            VisitBaseNode(typeFieldAccessNode.Member);
+        }
+
+        return typeFieldAccessNode;
     }
 
     public override IdentifierNode VisitIdentifierNode(IdentifierNode identifierNode)
@@ -236,7 +257,19 @@ public class SemanticPassBaseNodeVisitor(SemanticHandler semanticHandler, BaseSc
             return identifierNode;
         }
 
-        if (SemanticHandler.TryLookupIdentifier(identifierNode.Name, out var symbol))
+        if (CurrentScope.Type == ScopeType.Enum && SemanticHandler.TryLookupType(identifierNode.Name, out var symbol))
+        {
+            if (symbol.TypeRef.TypeInfo.IsUnknown)
+            {
+                throw new CompileError.SemanticError(
+                    "unknown type",
+                    symbol.Node
+                );
+            }
+
+            identifierNode.TypeRef = symbol.TypeRef;
+        }
+        else if (SemanticHandler.TryLookupIdentifier(identifierNode.Name, out symbol))
         {
             if (symbol.TypeRef.TypeInfo.IsUnknown && symbol.Node is not VariableDeclarationNode)
             {

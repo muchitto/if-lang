@@ -44,6 +44,16 @@ public abstract class BaseComparer : ITypeComparer
         return false;
     }
 
+    public bool CompareFunctionParameterTypeInfo(FunctionParameterTypeInfo typeInfo, TypeInfo other)
+    {
+        if (other is not FunctionParameterTypeInfo functionParameterTypeInfo)
+        {
+            return false;
+        }
+
+        return !typeInfo.TypeRef.Compare(functionParameterTypeInfo.TypeRef);
+    }
+
     public virtual bool CompareStringTypeInfo(StringTypeInfo typeInfo, TypeInfo other)
     {
         return other is StringTypeInfo;
@@ -66,7 +76,7 @@ public abstract class BaseComparer : ITypeComparer
         return other is ObjectTypeInfo objectTypeInfo && typeInfo.Name == objectTypeInfo.Name;
     }
 
-    public virtual bool CompareGenericType(GenericTypeInfo typeInfo, TypeInfo other)
+    public virtual bool CompareGenericTypeInfo(GenericTypeInfo typeInfo, TypeInfo other)
     {
         if (other is not GenericTypeInfo otherGenericTypeInfo)
         {
@@ -167,6 +177,11 @@ public abstract class BaseComparer : ITypeComparer
         return true;
     }
 
+    public bool CompareEnumItemParameterTypeInfo(EnumItemParameterTypeInfo typeInfo, TypeInfo other)
+    {
+        throw new NotImplementedException();
+    }
+
     public bool CompareInlineEnumTypeInfo(InlineEnumTypeInfo typeInfo, TypeInfo other)
     {
         // TODO: Should we allow comparing inline enums with normal enums?
@@ -175,10 +190,10 @@ public abstract class BaseComparer : ITypeComparer
             return false;
         }
 
-        for (var i = 0; i < typeInfo.Items.Count; i++)
+        for (var i = 0; i < typeInfo.Fields.Count; i++)
         {
-            var ourItem = typeInfo.Items[i].TypeRef;
-            var theirItem = inlineEnumTypeInfo.Items[i].TypeRef;
+            var ourItem = typeInfo.Fields[i].TypeRef;
+            var theirItem = inlineEnumTypeInfo.Fields[i].TypeRef;
 
             if (Compare(ourItem.TypeInfo, theirItem.TypeInfo))
             {
@@ -189,24 +204,54 @@ public abstract class BaseComparer : ITypeComparer
         return true;
     }
 
-    public bool CompareAnonymousEnumTypeInfo(AnonymousEnumTypeInfo typeInfo, TypeInfo other)
+    public bool CompareBaseEnumTypeInfo(BaseEnumTypeInfo typeInfo, TypeInfo other)
     {
-        if (other is not AnonymousEnumTypeInfo otherAnonymousTypeInfo)
+        return typeInfo.Compare(this, other);
+    }
+
+    public bool CompareAbstractStructuralTypeInfo(AbstractStructuralTypeInfo typeInfo, TypeInfo other)
+    {
+        if (other is not AbstractStructuralTypeInfo abstractStructuralTypeInfo)
         {
             return false;
         }
 
-        foreach (var typeInfoField in typeInfo.Fields)
+        if (typeInfo.Fields.Count != abstractStructuralTypeInfo.Fields.Count)
         {
-            var field = otherAnonymousTypeInfo.GetField(typeInfoField.Name);
-            if (field != null && typeInfoField.TypeRef.TypeInfo.Compare(this, field.TypeRef.TypeInfo))
-            {
-                continue;
-            }
-
             return false;
+        }
+
+        for (var f = 0; f < typeInfo.Fields.Count; f++)
+        {
+            var field = typeInfo.Fields[f];
+            var otherField = abstractStructuralTypeInfo.Fields[f];
+
+            if (!field.TypeRef.TypeInfo.Compare(this, otherField.TypeRef.TypeInfo))
+            {
+                return false;
+            }
         }
 
         return true;
+    }
+
+    public bool CompareAbstractStructuralFieldTypeInfo(AbstractStructuralFieldTypeInfo typeInfo, TypeInfo other)
+    {
+        if (other is not AbstractStructuralFieldTypeInfo abstractStructuralFieldTypeInfo)
+        {
+            return false;
+        }
+
+        return !abstractStructuralFieldTypeInfo.TypeRef.Compare(other);
+    }
+
+    public bool CompareFoundationalTypeInfo(FoundationalTypeInfo foundationalTypeInfo, TypeInfo other)
+    {
+        return foundationalTypeInfo.Compare(this, other);
+    }
+
+    public bool CompareScopedTypeInfo(ScopedTypeInfo scopedTypeInfo, TypeInfo other)
+    {
+        return scopedTypeInfo.Compare(this, other);
     }
 }

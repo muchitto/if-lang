@@ -19,6 +19,6 @@ public class GenericTypeInfo(string name, List<TypeRef> genericParams) : TypeInf
 
     public override bool Compare(ITypeComparer comparer, TypeInfo other)
     {
-        return comparer.CompareGenericType(this, other);
+        return comparer.CompareGenericTypeInfo(this, other);
     }
 }

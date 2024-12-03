@@ -5,7 +5,7 @@ namespace Compiler.Syntax.Nodes.TypeInfoNodes;
 /**
  * Represents and inline enum type definition.
  */
-public class TypeInfoAnonymousEnumNode(
+public class TypeInfoInlineEnumNode(
     NodeContext nodeContext,
     List<TypeInfoEnumFieldNode> fields
 ) : TypeInfoNode(nodeContext), IEquatable<BaseNode>
@@ -14,12 +14,12 @@ public class TypeInfoAnonymousEnumNode(
 
     public bool Equals(BaseNode? other)
     {
-        return other is TypeInfoAnonymousEnumNode anonymousEnumTypeInfoNode &&
+        return other is TypeInfoInlineEnumNode anonymousEnumTypeInfoNode &&
                Fields.SequenceEqual(anonymousEnumTypeInfoNode.Fields);
     }
 
     public override BaseNode Accept(INodeVisitor nodeVisitor)
     {
-        return nodeVisitor.VisitTypeInfoAnonymousEnumNode(this);
+        return nodeVisitor.VisitTypeInfoInlineEnumNode(this);
     }
 }

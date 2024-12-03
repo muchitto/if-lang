@@ -70,4 +70,14 @@ public abstract class BaseNode
 
         return typeCastNode;
     }
+
+    public virtual bool Compare(BaseNode baseNode)
+    {
+        return Compare(baseNode.ReturnedTypeRef);
+    }
+
+    public virtual bool Compare(TypeRef typeRef)
+    {
+        return ReturnedTypeRef.Compare(typeRef);
+    }
 }

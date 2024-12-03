@@ -36,9 +36,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
             objectDeclarationNode.TypeRef.TypeInfo =
                 new ObjectTypeInfo(objectScope, baseTypeRef, name, fields);
 
-            foreach (var declarationNode in objectDeclarationNode
-                         .Fields
-                         .OrderByDescending(f => f is VariableDeclarationNode))
+            foreach (var declarationNode in objectDeclarationNode.Fields)
             {
                 VisitDeclarationNode(declarationNode);
 
@@ -80,16 +78,25 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
     {
         var name = variableDeclarationNode.Named.Name;
 
+        if (variableDeclarationNode.Value != null)
+        {
+            VisitBaseNode(variableDeclarationNode.Value);
+
+            variableDeclarationNode.TypeRef = variableDeclarationNode.Value.TypeRef;
+        }
+        else if (variableDeclarationNode.TypeInfoNode == null)
+        {
+            throw new CompileError.SemanticError(
+                "need at least a type annotation or an initial value",
+                variableDeclarationNode
+            );
+        }
+
         if (variableDeclarationNode.TypeInfoNode != null)
         {
             VisitTypeInfoNode(variableDeclarationNode.TypeInfoNode);
 
             variableDeclarationNode.TypeRef = variableDeclarationNode.TypeInfoNode.TypeRef;
-        }
-
-        if (variableDeclarationNode.Value != null)
-        {
-            VisitBaseNode(variableDeclarationNode.Value);
         }
 
         SemanticHandler.SetSymbol(
@@ -109,7 +116,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
         FunctionDeclarationNode functionDeclarationNode
     )
     {
-        var parameters = new List<FunctionTypeInfoParameter>();
+        var parameters = new List<FunctionParameterTypeInfo>();
         var name = functionDeclarationNode.Named.Name;
 
         using (EnterScope(ScopeType.Function, functionDeclarationNode))
@@ -120,7 +127,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
                 var parameterTypeRef = VisitTypeInfoNode(parameter.TypeInfoNode).TypeRef;
 
                 parameter.TypeRef = parameterTypeRef;
-                parameters.Add(new FunctionTypeInfoParameter(parameterName, parameterTypeRef));
+                parameters.Add(new FunctionParameterTypeInfo(parameterName, parameterTypeRef));
 
                 SemanticHandler.SetSymbol(
                     new Symbol(
@@ -149,7 +156,12 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
 
 
         SemanticHandler.SetSymbol(
-            new Symbol(name, CurrentScope, functionDeclarationNode, SymbolType.Identifier),
+            new Symbol(
+                name,
+                CurrentScope,
+                functionDeclarationNode,
+                SymbolType.Identifier
+            ),
             true
         );
 
@@ -199,7 +211,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
     {
         var name = externFunctionNode.Named.Name;
 
-        var parameters = new List<FunctionTypeInfoParameter>();
+        var parameters = new List<FunctionParameterTypeInfo>();
 
         foreach (var parameter in externFunctionNode.ParameterNodes)
         {
@@ -208,7 +220,7 @@ public class DeclarationCollectionNodeVisitor(SemanticHandler semanticHandler)
             var parameterName = parameter.Named.Name;
             var parameterTypeRef = parameter.TypeRef;
 
-            parameters.Add(new FunctionTypeInfoParameter(parameterName, parameterTypeRef));
+            parameters.Add(new FunctionParameterTypeInfo(parameterName, parameterTypeRef));
         }
 
         var returnTypeRef = new TypeRef(TypeInfo.Void);

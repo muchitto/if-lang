@@ -73,9 +73,7 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
                 );
             }
 
-            foreach (var declarationNode in objectDeclarationNode
-                         .Fields
-                         .OrderByDescending(d => d is VariableDeclarationNode))
+            foreach (var declarationNode in objectDeclarationNode.Fields)
             {
                 VisitDeclarationNode(declarationNode);
 
@@ -588,6 +586,28 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
         return functionCallNode;
     }
 
+    public override FieldAccessNode VisitFieldAccessNode(FieldAccessNode fieldAccessNode)
+    {
+        // Check if the type is an enum
+        if (SemanticHandler.TryLookupType(fieldAccessNode.BaseObjectName.Name, out var enumSymbol))
+        {
+            if (enumSymbol.Node is EnumDeclarationNode or TypeInfoInlineEnumNode)
+            {
+                var typeFieldAccessNode = fieldAccessNode.ToTypeFieldAccessNode();
+
+                VisitTypeInfoNameNode(typeFieldAccessNode.BaseTypeNode);
+
+                typeFieldAccessNode = VisitTypeFieldAccessNode(typeFieldAccessNode);
+
+                typeFieldAccessNode.TypeRef = typeFieldAccessNode.Member.TypeRef;
+
+                return typeFieldAccessNode;
+            }
+        }
+
+        return base.VisitFieldAccessNode(fieldAccessNode);
+    }
+
     public override VariableDeclarationNode VisitVariableDeclarationNode(
         VariableDeclarationNode variableDeclarationNode
     )
@@ -632,7 +652,7 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
                 }
 
                 var inferenceVisitor = new InferenceNodeVisitor(SemanticHandler);
-                inferenceVisitor.VisitVariableDeclarationNode(variableDeclarationNode);
+                variableDeclarationNode = inferenceVisitor.VisitVariableDeclarationNode(variableDeclarationNode);
             }
 
             if (typeRef == null)
@@ -689,19 +709,8 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
         }
         else if (assignmentNode.Value is EnumShortHandNode)
         {
-            var inferenceVisitor = new InferenceNodeVisitor(SemanticHandler);
-            inferenceVisitor.VisitAssignmentNode(assignmentNode);
+            assignmentNode.Value.TypeRef = assignmentNode.Name.TypeRef;
         }
-
-        /*
-        if (!assignmentNode.Name.TypeRef.Compare(assignmentNode.Value.TypeRef))
-        {
-            throw new CompileError.SemanticError(
-                $"assignment type mismatch, expected {assignmentNode.Name.TypeRef.TypeInfo}, got {assignmentNode.Value.TypeRef.TypeInfo}",
-                assignmentNode.NodeContext.PositionData
-            );
-        }
-        */
 
         assignmentNode.TypeRef = assignmentNode.Value.TypeRef;
 
@@ -818,7 +827,7 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
             );
         }
 
-        var parameters = new List<FunctionTypeInfoParameter>();
+        var parameters = new List<FunctionParameterTypeInfo>();
 
         BodyBlockNode functionBodyBlock;
 
@@ -828,7 +837,7 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
             {
                 VisitFunctionDeclarationParameterNode(parameterNode);
 
-                parameters.Add(new FunctionTypeInfoParameter(parameterNode.Named.Name, parameterNode.TypeRef));
+                parameters.Add(new FunctionParameterTypeInfo(parameterNode.Named.Name, parameterNode.TypeRef));
             }
 
             functionBodyBlock = VisitBodyBlockNode(functionDeclarationNode.Body);
@@ -886,16 +895,17 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
         return functionDeclarationNode;
     }
 
-    public override TypeInfoAnonymousEnumNode VisitTypeInfoAnonymousEnumNode(
-        TypeInfoAnonymousEnumNode typeInfoAnonymousEnumNode
+
+    public override TypeInfoInlineEnumNode VisitTypeInfoInlineEnumNode(
+        TypeInfoInlineEnumNode typeInfoInlineEnumNode
     )
     {
-        var fields = new List<InlineEnumItemTypeInfo>();
-        foreach (var field in typeInfoAnonymousEnumNode.Fields)
+        var fields = new List<AbstractStructuralFieldTypeInfo>();
+        foreach (var field in typeInfoInlineEnumNode.Fields)
         {
             VisitTypeInfoEnumFieldNode(field);
 
-            if (field.TypeRef.Compare(TypeInfo.Unknown))
+            if (field.TypeRef.IsUnknown)
             {
                 throw new CompileError.SemanticError(
                     $"enum field {field.Named.Name} type not resolved",
@@ -903,12 +913,15 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
                 );
             }
 
-            fields.Add(new InlineEnumItemTypeInfo(field.Named.Name, field.TypeRef));
+            fields.Add(new AbstractStructuralFieldTypeInfo(field.Named.Name, field.TypeRef));
         }
 
-        typeInfoAnonymousEnumNode.TypeRef.TypeInfo = new InlineEnumTypeInfo(fields);
+        typeInfoInlineEnumNode.TypeRef.TypeInfo = new InlineEnumTypeInfo(
+            CurrentScope,
+            fields
+        );
 
-        return typeInfoAnonymousEnumNode;
+        return typeInfoInlineEnumNode;
     }
 
     public override TypeInfoEnumFieldNode VisitTypeInfoEnumFieldNode(TypeInfoEnumFieldNode typeInfoEnumFieldNode)
@@ -918,7 +931,7 @@ public class TypeResolutionNodeVisitor(SemanticHandler semanticHandler)
         {
             VisitTypeInfoEnumFieldParamNode(parameter);
 
-            if (parameter.TypeRef.Compare(TypeInfo.Unknown))
+            if (parameter.TypeRef.IsUnknown)
             {
                 throw new CompileError.SemanticError(
                     $"enum field parameter {parameter.Named.Name} type not resolved",

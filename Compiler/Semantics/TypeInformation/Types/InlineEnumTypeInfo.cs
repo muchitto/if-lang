@@ -1,9 +1,10 @@
+using Compiler.Semantics.ScopeHandling;
+
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class InlineEnumTypeInfo(List<InlineEnumItemTypeInfo> items) : TypeInfo
+public class InlineEnumTypeInfo(Scope scope, List<AbstractStructuralFieldTypeInfo> items)
+    : BaseEnumTypeInfo(scope, items)
 {
-    public List<InlineEnumItemTypeInfo> Items { get; } = items;
-
     public override string? TypeName => null;
 
     public override void Accept(ITypeInfoVisitor typeInfoVisitor)

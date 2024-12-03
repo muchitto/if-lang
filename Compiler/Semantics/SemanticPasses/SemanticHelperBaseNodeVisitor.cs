@@ -20,12 +20,13 @@ public abstract class SemanticHelperBaseNodeVisitor(SemanticHandler semanticHand
         return
         [
             new ReorganizeNodesNodeVisitor(semanticHandler),
+            new MainFunctionCheckNodeVisitor(semanticHandler),
             new DeclarationCollectionNodeVisitor(semanticHandler),
             new TypeResolutionNodeVisitor(semanticHandler),
             new UnknownCheckerVisitor(semanticHandler),
             new TypeCheckNodeVisitor(semanticHandler),
             new NullCheckerNodeVisitor(semanticHandler),
-            new ControlFlowConstructionVisitor(semanticHandler)
+            new ControlFlowConstructionNodeVisitor(semanticHandler)
         ];
     }
 

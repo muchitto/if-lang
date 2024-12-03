@@ -1,9 +1,9 @@
 namespace Compiler.Semantics.TypeInformation.Types;
 
-public class FunctionTypeInfo(TypeRef returnType, List<FunctionTypeInfoParameter> parameters) : TypeInfo
+public class FunctionTypeInfo(TypeRef returnType, List<FunctionParameterTypeInfo> parameters) : TypeInfo
 {
     public TypeRef ReturnType { get; } = returnType;
-    public List<FunctionTypeInfoParameter> Parameters { get; } = parameters;
+    public List<FunctionParameterTypeInfo> Parameters { get; } = parameters;
 
     public override string? TypeName => null;
 

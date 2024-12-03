@@ -25,4 +25,12 @@ public class TypeInfoNameNode(NodeContext nodeContext, string name, List<TypeInf
     {
         return Name;
     }
+
+    public IdentifierNode IdentifierNode()
+    {
+        return new IdentifierNode(
+            NodeContext,
+            Name
+        );
+    }
 }

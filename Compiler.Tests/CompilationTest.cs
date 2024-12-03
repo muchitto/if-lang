@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Compiler.ErrorHandling;
 using Compiler.Parsing;
 using Compiler.Semantics;
@@ -19,9 +20,9 @@ public abstract class CompilationTest
         return new Parser(compilationContext);
     }
 
-    protected void RunSemanticTest(string testName, string source)
+    protected void RunSemanticTest(string source, [CallerMemberName] string testName = "")
     {
-        var program = Parser.Parse("TypeCrossReferencesInVariables", source);
+        var program = Parser.Parse(testName, source);
 
         SemanticHelperBaseNodeVisitor.RunDefaultPasses(program, new SemanticContext());
     }

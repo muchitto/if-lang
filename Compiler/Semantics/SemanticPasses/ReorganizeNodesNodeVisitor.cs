@@ -9,7 +9,7 @@ public class ReorganizeNodesNodeVisitor(SemanticHandler semanticHandler) : BaseN
     {
         var sortedStatements = bodyBlockNode.Statements
             .Select((statement, index) => new { Statement = statement, Index = index })
-            .OrderBy(item => item.Statement is DeclarationNode and not VariableDeclarationNode ? 0 : 1)
+            .OrderByDescending(item => item.Statement is DeclarationNode and not VariableDeclarationNode)
             .ThenBy(item => item.Index) // Maintain original order for everything else
             .Select(item => item.Statement)
             .ToList();
@@ -21,16 +21,18 @@ public class ReorganizeNodesNodeVisitor(SemanticHandler semanticHandler) : BaseN
 
     public override ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode)
     {
-        objectDeclarationNode.Fields.Sort((a, b) =>
-            b is VariableDeclarationNode ? 1 : -1);
+        objectDeclarationNode.Fields = objectDeclarationNode.Fields
+            .OrderByDescending(a => a is VariableDeclarationNode)
+            .ToList();
 
         return base.VisitObjectDeclarationNode(objectDeclarationNode);
     }
 
     public override ProgramNode VisitProgramNode(ProgramNode programNode)
     {
-        programNode.Declarations.Sort((a, b) =>
-            b is VariableDeclarationNode ? -1 : 1);
+        programNode.Declarations = programNode.Declarations
+            .OrderByDescending(a => a is VariableDeclarationNode)
+            .ToList();
 
         return base.VisitProgramNode(programNode);
     }

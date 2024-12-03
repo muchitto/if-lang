@@ -282,11 +282,11 @@ public abstract class BaseNodeVisitor : INodeVisitor
 
     [StackTraceHidden]
     [DebuggerHidden]
-    public virtual MemberAccessNode VisitMemberAccessNode(MemberAccessNode memberAccessNode)
+    public virtual FieldAccessNode VisitFieldAccessNode(FieldAccessNode fieldAccessNode)
     {
-        memberAccessNode.BaseObject = VisitNode(memberAccessNode.BaseObject);
-        memberAccessNode.Member = VisitNode(memberAccessNode.Member);
-        return memberAccessNode;
+        fieldAccessNode.BaseObjectName = VisitNode(fieldAccessNode.BaseObjectName);
+        fieldAccessNode.Member = VisitNode(fieldAccessNode.Member);
+        return fieldAccessNode;
     }
 
     [StackTraceHidden]
@@ -432,12 +432,12 @@ public abstract class BaseNodeVisitor : INodeVisitor
 
     [StackTraceHidden]
     [DebuggerHidden]
-    public virtual TypeInfoAnonymousEnumNode VisitTypeInfoAnonymousEnumNode(
-        TypeInfoAnonymousEnumNode typeInfoAnonymousEnumNode
+    public virtual TypeInfoInlineEnumNode VisitTypeInfoInlineEnumNode(
+        TypeInfoInlineEnumNode typeInfoInlineEnumNode
     )
     {
-        typeInfoAnonymousEnumNode.Fields = VisitNodes(typeInfoAnonymousEnumNode.Fields);
-        return typeInfoAnonymousEnumNode;
+        typeInfoInlineEnumNode.Fields = VisitNodes(typeInfoInlineEnumNode.Fields);
+        return typeInfoInlineEnumNode;
     }
 
     [StackTraceHidden]
@@ -510,6 +510,22 @@ public abstract class BaseNodeVisitor : INodeVisitor
     public virtual NullLiteralNode VisitNullLiteralNode(NullLiteralNode nullLiteralNode)
     {
         return nullLiteralNode;
+    }
+
+    public virtual ObjectFieldAccessNode VisitObjectFieldAccessNode(ObjectFieldAccessNode objectFieldAccessNode)
+    {
+        objectFieldAccessNode.BaseObjectName = VisitNode(objectFieldAccessNode.BaseObjectName);
+        objectFieldAccessNode.Member = VisitNode(objectFieldAccessNode.Member);
+
+        return objectFieldAccessNode;
+    }
+
+    public virtual TypeFieldAccessNode VisitTypeFieldAccessNode(TypeFieldAccessNode typeFieldAccessNode)
+    {
+        typeFieldAccessNode.BaseTypeNode = VisitNode(typeFieldAccessNode.BaseTypeNode);
+        typeFieldAccessNode.Member = VisitNode(typeFieldAccessNode.Member);
+
+        return typeFieldAccessNode;
     }
 
     [StackTraceHidden]

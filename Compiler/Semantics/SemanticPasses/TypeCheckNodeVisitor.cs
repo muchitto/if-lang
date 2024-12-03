@@ -8,6 +8,11 @@ namespace Compiler.Semantics.SemanticPasses;
 public class TypeCheckNodeVisitor(SemanticHandler semanticHandler)
     : SemanticPassBaseNodeVisitor(semanticHandler, new TypeResolutionScopeHandler(semanticHandler))
 {
+    public override ProgramNode VisitProgramNode(ProgramNode programNode)
+    {
+        return base.VisitProgramNode(programNode);
+    }
+
     public override AssignmentNode VisitAssignmentNode(AssignmentNode assignmentNode)
     {
         if (!assignmentNode.TypeRef.Compare(assignmentNode.Value))
@@ -76,6 +81,73 @@ public class TypeCheckNodeVisitor(SemanticHandler semanticHandler)
         return base.VisitFunctionDeclarationParameterNode(functionDeclarationParameterNode);
     }
 
+    public override FunctionDeclarationNode VisitFunctionDeclarationNode(
+        FunctionDeclarationNode functionDeclarationNode
+    )
+    {
+        return base.VisitFunctionDeclarationNode(functionDeclarationNode);
+    }
+
+    public override ExpressionNode VisitExpressionNode(ExpressionNode expressionNode)
+    {
+        return base.VisitExpressionNode(expressionNode);
+    }
+
+    public override EnumShortHandNode VisitEnumShortHandNode(EnumShortHandNode enumShortHandNode)
+    {
+        var usedEnumName = enumShortHandNode.Named.Name;
+
+        if (enumShortHandNode.TypeRef.TypeInfo is not BaseEnumTypeInfo enumTypeInfo)
+        {
+            throw new CompileError.SemanticError(
+                "the enum usage does not have type information",
+                enumShortHandNode
+            );
+        }
+
+        var field = enumTypeInfo.Fields.ToList().Find(f => f.Name == usedEnumName);
+
+        if (field == null)
+        {
+            throw new CompileError.SemanticError(
+                $"no field {usedEnumName} in enum",
+                enumShortHandNode
+            );
+        }
+
+        if (field.TypeRef.TypeInfo is not EnumItemTypeInfo enumItemTypeInfo)
+        {
+            throw new CompileError.SemanticError(
+                "wrong typeinfo",
+                enumShortHandNode
+            );
+        }
+
+        if (enumShortHandNode.Parameters.Count != enumItemTypeInfo.Parameters.Count)
+        {
+            throw new CompileError.SemanticError(
+                "wrong amount of arguments given",
+                enumShortHandNode
+            );
+        }
+
+        for (var p = 0; p < enumShortHandNode.Parameters.Count; p++)
+        {
+            var typeField = enumShortHandNode.Parameters[p];
+            var enumField = enumItemTypeInfo.Parameters[p];
+
+            if (!enumField.TypeRef.Compare(typeField.TypeRef))
+            {
+                throw new CompileError.SemanticError(
+                    $"the field {enumField.Name} has a different type",
+                    enumShortHandNode
+                );
+            }
+        }
+
+        return base.VisitEnumShortHandNode(enumShortHandNode);
+    }
+
     public override VariableDeclarationNode VisitVariableDeclarationNode(
         VariableDeclarationNode variableDeclarationNode
     )
@@ -87,7 +159,7 @@ public class TypeCheckNodeVisitor(SemanticHandler semanticHandler)
 
         if (variableDeclarationNode.Value.TypeRef.TypeInfo is NumberTypeInfo valueNumberTypeInfo
             && valueNumberTypeInfo.CanImplicitlyConvert(valueNumberTypeInfo.NumberType)
-            && !variableDeclarationNode.Value.TypeRef.Compare(variableDeclarationNode.TypeRef))
+            && !variableDeclarationNode.Value.Compare(variableDeclarationNode))
         {
             if (variableDeclarationNode.TypeRef.TypeInfo is not NumberTypeInfo variableNumberTypeInfo)
             {
@@ -105,18 +177,19 @@ public class TypeCheckNodeVisitor(SemanticHandler semanticHandler)
             new TypeResolutionNodeVisitor(semanticHandler).VisitTypeCastNode(typeCastNode);
         }
 
-        if (
-            (variableDeclarationNode.TypeInfoNode != null &&
-             !variableDeclarationNode.TypeInfoNode.TypeRef.Compare(variableDeclarationNode.Value))
-            || !variableDeclarationNode.TypeRef.Compare(variableDeclarationNode.Value))
+        if (variableDeclarationNode.TypeInfoNode is not null)
         {
-            throw new CompileError.SemanticError(
-                "the variable type and value does not match",
-                variableDeclarationNode
-            );
+            if (!variableDeclarationNode.TypeInfoNode.Compare(variableDeclarationNode.Value)
+                || !variableDeclarationNode.Compare(variableDeclarationNode.Value))
+            {
+                throw new CompileError.SemanticError(
+                    "the variable type and value does not match",
+                    variableDeclarationNode
+                );
+            }
         }
 
-        if (!variableDeclarationNode.TypeRef.Compare(variableDeclarationNode.Value))
+        if (!variableDeclarationNode.Compare(variableDeclarationNode.Value))
         {
             throw new CompileError.SemanticError(
                 "variable value type does not match the type of the variable",

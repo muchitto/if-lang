@@ -72,7 +72,6 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
             EnumTypeInfo enumTypeInfo => VisitEnumTypeInfo(enumTypeInfo),
             InlineEnumTypeInfo inlineEnumTypeInfo => VisitInlineEnumTypeInfo(inlineEnumTypeInfo),
             EnumItemTypeInfo enumItemTypeInfo => VisitEnumItemTypeInfo(enumItemTypeInfo),
-            AnonymousEnumTypeInfo anonymousEnumTypeInfo => VisitAnonymousEnumTypeInfo(anonymousEnumTypeInfo),
             _ => throw new NotImplementedException()
         };
     }
@@ -91,7 +90,7 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
 
     public virtual InlineEnumTypeInfo VisitInlineEnumTypeInfo(InlineEnumTypeInfo inlineEnumTypeInfo)
     {
-        VisitTypeRefs(inlineEnumTypeInfo.Items);
+        VisitTypeRefs(inlineEnumTypeInfo.Fields);
         return inlineEnumTypeInfo;
     }
 
@@ -119,12 +118,6 @@ public class BaseTypeInfoVisitor : ITypeInfoVisitor
     )
     {
         throw new NotImplementedException();
-    }
-
-    public virtual AnonymousEnumTypeInfo VisitAnonymousEnumTypeInfo(AnonymousEnumTypeInfo anonymousEnumTypeInfo)
-    {
-        VisitTypeRefs(anonymousEnumTypeInfo.Fields);
-        return anonymousEnumTypeInfo;
     }
 
     public virtual FoundationalTypeInfo VisitFoundationalTypeInfo(FoundationalTypeInfo foundationalTypeInfo)

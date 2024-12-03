@@ -238,17 +238,17 @@ public class UnknownCheckerVisitor(SemanticHandler semanticHandler) : BaseNodeVi
         return base.VisitExpressionNode(expressionNode);
     }
 
-    public override MemberAccessNode VisitMemberAccessNode(MemberAccessNode memberAccessNode)
+    public override FieldAccessNode VisitFieldAccessNode(FieldAccessNode fieldAccessNode)
     {
-        if (memberAccessNode.TypeRef.TypeInfo.IsIncomplete)
+        if (fieldAccessNode.TypeRef.TypeInfo.IsIncomplete)
         {
             throw new CompileError.SemanticError(
                 "member access type is incomplete",
-                memberAccessNode.NodeContext.PositionData
+                fieldAccessNode.NodeContext.PositionData
             );
         }
 
-        return base.VisitMemberAccessNode(memberAccessNode);
+        return base.VisitFieldAccessNode(fieldAccessNode);
     }
 
     public override ObjectDeclarationNode VisitObjectDeclarationNode(ObjectDeclarationNode objectDeclarationNode)
