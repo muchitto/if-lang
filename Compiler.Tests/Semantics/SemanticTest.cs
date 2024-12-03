@@ -255,6 +255,103 @@ public class SemanticTest : CompilationTest
         RunSemanticTest(source);
     }
 
+    [Fact]
+    public void UsingEnumDeclarationAndCheckingItInAnIfButWithWrongName()
+    {
+        var source = @"
+            enum Switch {
+                Yes,
+                No
+            }
+
+            var enumVar : Switch = .Yes
+
+            if enumVar == .Noo {
+            }
+        ";
+
+        try
+        {
+            RunSemanticTest(source);
+        }
+        catch (CompileError.SemanticError)
+        {
+            return;
+        }
+
+        Assert.Fail();
+    }
+
+    [Fact]
+    public void UsingEnumDeclarationWithParameterAndCheckingItInAnIfButWithWrongParameter()
+    {
+        var source = @"
+            enum Switch {
+                Yes(test : string),
+                No
+            }
+
+            var enumVar : Switch = .No
+
+            if enumVar == .Yes(10) {
+            }
+        ";
+
+        try
+        {
+            RunSemanticTest(source);
+        }
+        catch (CompileError.SemanticError)
+        {
+            return;
+        }
+
+        Assert.Fail();
+    }
+
+    [Fact]
+    public void UsingInlineEnumAndCheckingItInAnIfButWithWrongName()
+    {
+        var source = @"
+            var enumVar : Yes | No = .Yes
+
+            if enumVar == .Noo {
+            }
+        ";
+
+        try
+        {
+            RunSemanticTest(source);
+        }
+        catch (CompileError.SemanticError)
+        {
+            return;
+        }
+
+        Assert.Fail();
+    }
+
+    [Fact]
+    public void UsingInlineEnumWithParameterAndCheckingItInAnIfButWithWrongParameter()
+    {
+        var source = @"
+            var enumVar : Yes(test : string) | No = .No
+
+            if enumVar == .Yes(10) {
+            }
+        ";
+
+        try
+        {
+            RunSemanticTest(source);
+        }
+        catch (CompileError.SemanticError)
+        {
+            return;
+        }
+
+        Assert.Fail();
+    }
 
     [Fact]
     public void UsingWrongEnumInlineAndDeclaration()
